@@ -3,350 +3,383 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Crystal Math</title>
+  <title>pDAI Timeline</title>
   <style>
-    * { margin:0; padding:0; box-sizing:border-box; }
-    html, body { width:100%; min-height:100%; overflow:auto; background:#000; font-family:sans-serif; }
-    #canvas-container { position:fixed; top:0; left:0; width:100%; height:100%; }
-    .content { position:relative; z-index:1; text-align:center; max-width:960px; width:92%;
-      background:rgba(0,0,0,0.4);
-      padding:1.3rem 1.5rem; border-radius:.5rem; border:1px solid rgba(255,255,255,0.05);
-      margin:1.5rem auto 2rem;
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      min-height: 100%;
+      overflow: auto;
+      background: #000;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      color: #dceaff;
     }
-    .title { margin:1.5rem 0; font-size:2rem; letter-spacing:1.5rem;
-      background:linear-gradient(90deg,hsl(200,100%,50%),hsl(280,100%,50%),hsl(220,100%,45%));
-      -webkit-background-clip:text; color:transparent;
+
+    #canvas-container {
+      position: fixed;
+      inset: 0;
     }
-    .intro, .intro2 { margin:0.12rem 0; white-space:pre-line; font-size:.6rem;
-      letter-spacing:.05em; font-weight:300; line-height:1.55;
+
+    .content {
+      position: relative;
+      z-index: 1;
+      max-width: 1100px;
+      width: min(95%, 1100px);
+      margin: 2.2rem auto;
+      background: rgba(4, 9, 22, 0.58);
+      border: 1px solid rgba(132, 207, 255, 0.24);
+      border-radius: 18px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), 0 0 40px rgba(58, 133, 240, 0.22);
+      backdrop-filter: blur(4px);
+      padding: 1.2rem 1.2rem 1.5rem;
     }
-    .intro { color:#ba5cbf; }
-    .intro a { color:inherit; text-decoration:none; }
-    .intro a:hover { text-decoration:underline; }
-    .intro2 { color:#5a9ba4; }
-    .main-info { margin-top:1.2rem; text-align:center; color:#d7e8ff; font-size:.98rem; display:flex; flex-direction:column; gap:.9rem; align-items:center; }
-    .info-block { background:rgba(5,15,35,0.65); border:1px solid rgba(120,200,255,0.2);
-      border-radius:.9rem; padding:1.35rem 1.6rem; box-shadow:0 0 25px rgba(60,0,120,0.25);
-      max-width:820px; width:100%;
+
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: .8rem;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 1rem;
+      padding: .6rem .6rem 0;
     }
-    .info-title { color:#7dd1ff; font-size:1.02rem; letter-spacing:.1em; text-transform:uppercase;
-      margin-bottom:.8rem; text-align:center;
+
+    .title {
+      font-size: clamp(1.1rem, 2.8vw, 1.8rem);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      background: linear-gradient(90deg, #54e5ff, #8f8bff 45%, #ca65ff 90%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
     }
-    .info-list { list-style:none; display:grid; gap:.8rem; font-size:.98rem; justify-items:center; }
-    .info-list li { position:relative; padding-left:0; line-height:1.6; text-align:center; max-width:720px; }
-    .info-list li::before { content:"✦"; display:inline-block; margin-right:.55rem; color:#92e5ff;
-      text-shadow:0 0 8px rgba(90,190,255,0.9);
+
+    .subtitle {
+      font-size: .85rem;
+      color: #9bb8db;
+      letter-spacing: .04em;
     }
-    .info-list li.no-bullet::before { content:none; margin-right:0; }
-    .info-list li.tight-stack { margin-top:-0.45rem; }
-    .price-line { color:#cfc7ff; font-size:1rem; }
-    .price-line strong { color:#88f5ff; }
-    .price-value { color:#fff; font-weight:600; text-shadow:0 0 10px rgba(120,210,255,0.7); display:inline-block; }
-    .price-value.flash-up { animation:priceFlashUp 0.75s ease-out; }
-    .price-value.flash-down { animation:priceFlashDown 0.75s ease-out; }
-    .price-value.flash-flat { animation:priceFlashFlat 0.75s ease-out; }
-    @keyframes priceFlashUp {
-      0% { color:#1df59a; text-shadow:0 0 18px rgba(29,245,154,0.85); }
-      100% { color:#fff; text-shadow:0 0 10px rgba(120,210,255,0.7); }
+
+    .chart-shell {
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+      border-radius: 14px;
+      border: 1px solid rgba(143, 200, 255, .2);
+      background:
+        radial-gradient(1000px 220px at 20% 0%, rgba(83, 105, 255, .14), transparent 60%),
+        radial-gradient(820px 280px at 90% 100%, rgba(84, 229, 255, .12), transparent 70%),
+        rgba(3, 12, 29, .55);
+      padding: .6rem;
     }
-    @keyframes priceFlashDown {
-      0% { color:#ff5f6d; text-shadow:0 0 18px rgba(255,95,109,0.85); }
-      100% { color:#fff; text-shadow:0 0 10px rgba(120,210,255,0.7); }
+
+    svg {
+      width: 100%;
+      height: min(68vh, 560px);
+      min-height: 320px;
+      display: block;
     }
-    @keyframes priceFlashFlat {
-      0% { color:#4fa3ff; text-shadow:0 0 18px rgba(79,163,255,0.85); }
-      100% { color:#fff; text-shadow:0 0 10px rgba(120,210,255,0.7); }
+
+    .grid-line { stroke: rgba(130, 170, 230, 0.2); stroke-width: 1; }
+    .axis-label { fill: rgba(160, 191, 229, 0.85); font-size: 11px; }
+    .price-path {
+      fill: none;
+      stroke: url(#lineGradient);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      filter: drop-shadow(0 0 10px rgba(109, 208, 255, 0.35));
     }
-    .footers { margin-top:2rem; display:flex; flex-direction:column; align-items:center; gap:.75rem; }
-    .footer-address { color:rgba(0,255,255,0.75); display:inline-flex; align-items:center; font-size:.85rem; }
-    #copyBtn { margin-left:.5rem; background:none; border:none; font-size:1.2rem; color:inherit; cursor:pointer; }
-    .footer-note { color:grey; margin-top:.2rem; font-size:.72rem; text-align:center; line-height:1.5; }
-    .support-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:.85rem; width:100%; max-width:820px; }
-    .card-lite { background:transparent; border:none; border-radius:0; padding:0; box-shadow:none; text-align:center; }
-    .card-lite h3 { color:#89d9ff; font-size:.93rem; letter-spacing:.08em; margin-bottom:.45rem; text-transform:uppercase; }
-    .flowchart-inline { cursor:pointer; text-decoration:underline; text-underline-offset:4px; color:#cfe7ff; background:none; border:none; padding:0; font-size:.92rem; }
-    .flowchart-inline.disabled { cursor:not-allowed; opacity:0.6; }
-    .flowchart-status { display:block; margin-top:.35rem; color:#8db7ff; font-size:.9rem; }
-    .video-shell { display:flex; flex-direction:column; gap:.35rem; align-items:center; }
-    .video-shell .video-frame { width:100%; max-width:520px; aspect-ratio:16/9; border:none; border-radius:.35rem; box-shadow:0 0 18px rgba(50,120,200,0.25);
-      background:rgba(10,20,40,0.45); overflow:hidden; }
-    .qr-block { margin:0.6rem auto 0; display:flex; flex-direction:column; align-items:center; gap:.45rem; }
-    .qr-block img { width:220px; height:220px; object-fit:contain; filter:drop-shadow(0 0 20px rgba(120,200,255,0.28)); }
-    .qr-note { color:#555555; font-size:.82rem; text-align:center; letter-spacing:.04em; }
-    .pdai-note { margin:1rem auto 0; max-width:780px; color:#a5c9ff; text-align:center; line-height:1.5; font-size:.95rem; }
-    @media(max-width:768px){.title{font-size:1.6rem;letter-spacing:1rem;}}@media(max-width:480px){.title{font-size:1.4rem;letter-spacing:.5rem;}}
+    .price-area { fill: url(#areaGradient); }
+
+    .event-dot {
+      fill: #bdf2ff;
+      stroke: rgba(32, 134, 238, 0.9);
+      stroke-width: 1.5;
+      cursor: pointer;
+      transition: r .18s ease, filter .18s ease;
+    }
+    .event-dot:hover {
+      filter: drop-shadow(0 0 8px rgba(131, 217, 255, .95));
+    }
+
+    .tooltip {
+      position: absolute;
+      pointer-events: none;
+      min-width: 220px;
+      max-width: min(88vw, 380px);
+      background: rgba(8, 18, 40, 0.92);
+      border: 1px solid rgba(134, 201, 255, 0.4);
+      border-radius: 10px;
+      color: #dbedff;
+      padding: .65rem .78rem;
+      font-size: .78rem;
+      line-height: 1.42;
+      box-shadow: 0 14px 25px rgba(0, 0, 0, .4);
+      opacity: 0;
+      transform: translate(-50%, -110%) scale(.98);
+      transition: opacity .14s ease, transform .14s ease;
+    }
+    .tooltip.visible {
+      opacity: 1;
+      transform: translate(-50%, -115%) scale(1);
+    }
+    .tooltip-date { color: #90b8ff; font-size: .72rem; margin-bottom: .25rem; }
+
+    @media (max-width: 700px) {
+      .content { padding: .8rem .7rem 1rem; margin: 1rem auto; }
+      .chart-shell { padding: .35rem; }
+      svg { height: 62vh; min-height: 300px; }
+    }
   </style>
 </head>
 <body>
   <div id="canvas-container"></div>
-  <div class="content">
-    <h1 class="title">CRYSTAL <span class="break">MATH</span></h1>
-    <p class="intro">ᴡʜɪᴛᴇ ʜᴀᴛ ʜᴀᴄᴋᴇʀs ʜᴀᴠᴇ ʟᴏɴɢ ᴄᴏ-ᴏᴘᴛᴇᴅ ᴛʜᴇ <a href="https://bitcoin.org/bitcoin.pdf" target="_blank" rel="noopener noreferrer">ᴄᴏᴅᴇs ᴏғ ᴘᴏᴡᴇʀ.</a>
-ᴛɪᴍᴇ ᴀɴᴅ ᴀɢᴀɪɴ, ᴛʜᴇʏ’ᴠᴇ <a href="https://etherscan.io/address/0x1dba1131000664b884a1ba238464159892252d3a" target="_blank" rel="noopener noreferrer">ᴇxᴘᴏsᴇᴅ ᴄʀᴀᴄᴋs ɪɴ ᴛʜᴇ ᴄᴇɴᴛʀᴀʟɪᴢᴇᴅ ғᴏʀᴛʀᴇss</a>, ᴅɪsᴍᴀɴᴛʟɪɴɢ ɪᴛ ʙʀɪᴄᴋ ʙʏ ʙʀɪᴄᴋ.
-ᴛʜʀᴏᴜɢʜ <a href="https://blockchair.com/bitcoin/address/1FeexV6bAHb8ybZjqQMjJrcCrHGW9sb6uF" target="_blank" rel="noopener noreferrer">ᴏ̨ᴜɪᴇᴛ sᴀʙᴏᴛᴀɢᴇ</a> ᴀɴᴅ <a href="https://etherscan.io/address/0x6b175474e89094c44da98b954eedeac495271d0f" target="_blank" rel="noopener noreferrer">ᴄʀʏᴘᴛɪᴄ ɪɴɴᴏᴠᴀᴛɪᴏɴ</a> ᴛʜᴇʏ ɴᴏᴡ <a href="https://x.com/delete_shitcoin/status/1585918718088970241" target="_blank" rel="noopener noreferrer">ᴛʜʀᴇᴀᴛᴇɴ ᴛʜᴇ ғᴏᴜɴᴅᴀᴛɪᴏɴ</a> <a href="https://wtfhappenedin1971.com/" target="_blank" rel="noopener noreferrer">ᴏғ ᴛʀᴀᴅ-ғɪ</a>,
-ᴄʟᴇᴀʀɪɴɢ ᴛʜᴇ ᴡᴀʏ ғᴏʀ ᴛʜᴇ <a href="https://scan.pulsechain.com" target="_blank" rel="noopener noreferrer">ʀɪsᴇ ᴏғ ᴛʜᴇ ᴅᴇᴄᴇɴᴛʀᴀʟɪᴢᴇᴅ ʀᴇᴀʟᴍ</a>.</p>
-    <div class="main-info">
-  <div class="info-block">
-    <div class="info-title">crystals can be found and redeemed for crypto</div>
-    <ul class="info-list">
-      <li>Use <strong>2 crystals</strong> to craft the beacon recipe and secure a <strong>64×64</strong> claim for your build.</li>
-      <li class="price-line">Testnet live until march15 @ 74.208.174.190 ⛏️💎<span id="crystal-price" class="price-value">$0.0146</span> (<strong>9×pDAI</strong>:<span id="pdai-price" class="price-value">$0.001618</span>)</li>
-      <li class="no-bullet" style="font-size:0.68rem; color:#9fb8d8; opacity:0.9; margin-top:0.35rem;">all crystal math is server side and doesn't require any mods; links below are optional addons</li>
-      <li class="no-bullet tight-stack">
-        <div class="modrinth-links-container" style="font-size:0.7rem; text-align:center; margin-top:0; display:flex; flex-wrap:wrap; justify-content:center; gap:0.5rem;">
-          <a href="https://maven.fabricmc.net/net/fabricmc/fabric-installer/1.1.1/fabric-installer-1.1.1.exe" target="_blank" style="color:#88f5ff; text-decoration:underline;">Fabric Installer</a>
-          <span>|</span>
-          <a href="https://cdn.modrinth.com/data/1bZhdhsH/versions/v5irHzkg/plasmovoice-fabric-1.21.6-2.1.8.jar" target="_blank" style="color:#88f5ff; text-decoration:underline;">PlasmoVoice</a>
-          <span>|</span>
-          <a href="https://cdn.modrinth.com/data/DyTvM1dv/versions/XEH1qWNo/AmbientEnvironment-fabric-1.21.8-25.0.0.1.jar" target="_blank" style="color:#88f5ff; text-decoration:underline;">Ambient Environment</a>
-          <span>|</span>
-          <a href="https://cdn.modrinth.com/data/OsZiaDHq/versions/mj0ahfMl/CreativeCore_FABRIC_v2.14.7_mc1.21.8.jar" target="_blank" style="color:#88f5ff; text-decoration:underline;">Creative Core</a>
-          <span>|</span>
-          <a href="https://cdn.modrinth.com/data/uCdwusMi/versions/PWWYVdOA/DistantHorizons-2.4.5-b-1.21.8-fabric-neoforge.jar" target="_blank" style="color:#88f5ff; text-decoration:underline;">Distant Horizons</a>
-        </div>
-      </li>
-    </ul>
-  </div>
-  <div class="support-grid">
-    <div class="card-lite video-shell">
-      <video id="info-video" class="video-frame" controls autoplay muted loop playsinline preload="metadata">
-        <source src="crystalmath.mp4" type="video/mp4">
-        Your browser does not support the video tag.
-      </video>
-    </div>
-  </div>
-</div>
-    <div class="pdai-note">pDAI is a speculative future stablecoin rumoured to peg to 1$ <span id="pdai-potential" style="display:block; margin-top:.35rem;">(potential 617.67x from here)</span></div>
-    <p class="intro2" style="margin:1.2rem 0 0rem; font-size:1rem;">
-      <a id="deeper-link" href="#" style="color:inherit; text-decoration:underline dotted;">ᴏɴʟʏ ᴏɴᴇ ᴡɪʟʟɪɴɢ ᴛᴏ ᴇᴍʙʀᴀᴄᴇ ᴜɴᴄᴇʀᴛᴀɪɴᴛʏ ᴍᴀʏ ᴜɴᴄᴏᴠᴇʀ ᴛʜᴇ ᴅᴇᴇᴘᴇʀ ʟᴀʏᴇʀs ᴏғ ᴛʜᴇ ᴡᴏʀᴋ</a>
-    </p>
-    <div class="footers">
-      <div class="footer-address">0x6b175474e89094c44da98b954eedeac495271d0f<button id="copyBtn">⎘</button></div>
-    </div>
-    <div class="qr-block">
-      <img id="qr-image" src="flebebians_transparent.png" alt="QR code for wallet" loading="lazy">
-      <div class="qr-note">𝑵 Ø Ⲧ Ӈ ᓿ ₦ ₲&nbsp;&nbsp;¡﹩ $ Δ ₡ ® Σ Đ</div>
-    </div>
+
+  <main class="content">
+    <div class="header">
+      <h1 class="title">pDAI Price Timeline</h1>
+      <p class="subtitle">Hover markers to view event titles</p>
     </div>
 
-    <div id="flowchart-modal" style="position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.9); z-index:5; opacity:0; pointer-events:none; transition:opacity 0.25s ease;">
-      <button id="flowchart-close" style="position:absolute; top:2rem; right:2rem; background:none; border:none; color:#e6f7ff; font-size:2rem; cursor:pointer;">×</button>
-      <img id="flowchart-img" src="" alt="Gameplay and economy flowchart" style="max-width:92%; max-height:92%; border-radius:.65rem; box-shadow:0 0 35px rgba(0,0,0,0.7); border:1px solid rgba(255,255,255,0.15); display:none;">
-      <div id="flowchart-missing" style="color:#cfe7ff; text-align:center; line-height:1.6; max-width:520px; display:none;">Flowchart image not found. Place <code>canvas_minecraft-economy-flowchart-251030_0147.png</code> next to <code>index.html</code> and click again to view it.</div>
-    </div>
-
-    <div id="image-modal" style="position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.88); z-index:5; opacity:0; pointer-events:none; transition:opacity 0.25s ease;">
-      <button id="close-modal" style="position:absolute; top:2rem; right:2rem; background:none; border:none; color:#e6f7ff; font-size:2rem; cursor:pointer;">×</button>
-      <img src="unit.jpg" alt="PulseChain crew" style="max-width:90%; max-height:90%; border-radius:.75rem; box-shadow:0 0 35px rgba(0,0,0,0.65); border:1px solid rgba(255,255,255,0.12);">
-    </div>
+    <section class="chart-shell" aria-label="pDAI timeline chart">
+      <svg id="timeline-chart" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid meet"></svg>
+      <div id="tooltip" class="tooltip" role="tooltip" aria-hidden="true"></div>
+    </section>
+  </main>
 
   <script src="https://pixijs.download/v6.5.8/pixi.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/pixi-filters@4.2.0/dist/pixi-filters.js"></script>
   <script>
-    const app = new PIXI.Application({ autoDensity:true, antialias:true,
-      backgroundAlpha:0, width:window.innerWidth, height:window.innerHeight,
-      resolution:window.devicePixelRatio||1
+    const app = new PIXI.Application({
+      autoDensity: true,
+      antialias: true,
+      backgroundAlpha: 0,
+      width: window.innerWidth,
+      height: window.innerHeight,
+      resolution: window.devicePixelRatio || 1
     });
+
     document.getElementById('canvas-container').appendChild(app.view);
     app.ticker.maxFPS = 120;
-    const CELL=150; let cols=0, rows=0; const grid=[], nodes=[];
-    const tmpG=new PIXI.Graphics(); tmpG.beginFill(0xffffff); tmpG.drawCircle(0,0,1.5); tmpG.endFill();
-    const nodeTex=app.renderer.generateTexture(tmpG);
-    const COLORS=[0xaa00ff,0x00aaff,0x004de6];
-    const lines=new PIXI.Graphics(); lines.blendMode=PIXI.BLEND_MODES.ADD; app.stage.addChild(lines);
-    let mouse=null;
-    window.addEventListener('mousemove', e=>mouse={x:e.clientX,y:e.clientY});
-    window.addEventListener('mouseleave', ()=>mouse=null);
-    function init(){cols=Math.ceil(app.screen.width/CELL);
-      rows=Math.ceil(app.screen.height/CELL);
-      grid.length=cols*rows;
-      for(let i=0;i<grid.length;i++)grid[i]=[];
-      nodes.length=0;
-      app.stage.removeChildren().forEach(c=>{});
+
+    const CELL = 150;
+    let cols = 0;
+    let rows = 0;
+    const grid = [];
+    const nodes = [];
+
+    const tmpG = new PIXI.Graphics();
+    tmpG.beginFill(0xffffff);
+    tmpG.drawCircle(0, 0, 1.5);
+    tmpG.endFill();
+    const nodeTex = app.renderer.generateTexture(tmpG);
+
+    const COLORS = [0xaa00ff, 0x00aaff, 0x004de6];
+    const lines = new PIXI.Graphics();
+    lines.blendMode = PIXI.BLEND_MODES.ADD;
+    app.stage.addChild(lines);
+
+    let mouse = null;
+    window.addEventListener('mousemove', (e) => { mouse = { x: e.clientX, y: e.clientY }; });
+    window.addEventListener('mouseleave', () => { mouse = null; });
+
+    function initBackground() {
+      cols = Math.ceil(app.screen.width / CELL);
+      rows = Math.ceil(app.screen.height / CELL);
+      grid.length = cols * rows;
+      for (let i = 0; i < grid.length; i += 1) grid[i] = [];
+      nodes.length = 0;
+      app.stage.removeChildren();
       app.stage.addChild(lines);
-      const count=Math.floor((app.screen.width*app.screen.height)/15000*1.56);
-      for(let i=0;i<count;i++){const n=new PIXI.Sprite(nodeTex);
-        n.tint=COLORS[i%COLORS.length]; n.anchor.set(0.5);
-        n.x=Math.random()*app.screen.width; n.y=Math.random()*app.screen.height;
-        n.vx=(Math.random()-0.5)*0.51; n.vy=(Math.random()-0.5)*0.51;
-        n.ix=n.iy=0; app.stage.addChild(n); nodes.push(n);
-      }}
-    app.ticker.add(()=>{
-      lines.clear(); for(let i=0;i<grid.length;i++)grid[i].length=0;
-      const sw=app.screen.width;
-      for(const n of nodes){
-        const idx=Math.floor(n.y/CELL)*cols+Math.floor(n.x/CELL);
-        if(grid[idx])grid[idx].push(n);
-      }
-      for(const a of nodes){
-        const col=Math.floor(a.x/CELL), row=Math.floor(a.y/CELL);
-        for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
-          const c=col+dx,r=row+dy;
-          if(c<0||c>=cols||r<0||r>=rows)continue;
-          for(const b of grid[r*cols+c]){
-            if(a===b)continue;
-            const dx_=a.x-b.x,dy_=a.y-b.y,dist=Math.hypot(dx_,dy_);
-            if(dist<CELL){lines.lineStyle(1.2,a.tint,((CELL-dist)/CELL)*0.4);
-              lines.moveTo(a.x,a.y).lineTo(b.x,b.y);}}
-        }}
-      for(const n of nodes){
-        n.x+=n.vx+n.ix; n.y+=n.vy+n.iy; n.ix*=0.6; n.iy*=0.6;
-        if(mouse){const dx_=n.x-mouse.x,dy_=n.y-mouse.y,dist=Math.hypot(dx_,dy_);
-          if(dist<CELL){const f=(CELL-dist)/CELL;n.ix+=(dx_/dist)*5*f; n.iy+=(dy_/dist)*5*f;}}
-        if(n.x<0||n.x>sw)n.vx*=-1;
-        if(n.y<0||n.y>app.screen.height)n.vy*=-1;
-      }
-      app.renderer.render(app.stage);
-    });
-    window.addEventListener('resize',()=>{app.renderer.resize(window.innerWidth,window.innerHeight);init();}); init();
-    const priceEl=document.getElementById('pdai-price');
-    const crystalPriceEl=document.getElementById('crystal-price');
-    const potentialEl=document.getElementById('pdai-potential');
-    const formatUsd=val=>`$${Number(val).toLocaleString(undefined,{minimumFractionDigits:4,maximumFractionDigits:4})}`;
-    const formatPdai=val=>`$${Number(val).toLocaleString(undefined,{minimumFractionDigits:6,maximumFractionDigits:6})}`;
-    const formatPotential=val=>`(potential ${Number(val).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}x from here)`;
-    const FALLBACK_PDAI=0.0016183;
-    const FALLBACK_CRYSTAL=0.0145647;
-    const FALLBACK_POTENTIAL_VALUE=617.67;
-    let lastPdaiPrice=null;
-    let lastCrystalPrice=null;
-    const applyFlash=(el,type)=>{
-      if(!el) return;
-      el.classList.remove('flash-up','flash-down','flash-flat');
-      void el.offsetWidth;
-      const cls=type==='up'?'flash-up':type==='down'?'flash-down':'flash-flat';
-      el.classList.add(cls);
-    };
-    function renderPrices(pdaiPrice){
-      const validPrice=Number.isFinite(pdaiPrice)&&pdaiPrice>0?pdaiPrice:null;
-      const pdaiValue=validPrice!==null?validPrice:FALLBACK_PDAI;
-      const crystalValue=validPrice!==null?validPrice*9:FALLBACK_CRYSTAL;
-      const potentialValue=validPrice!==null?(1/validPrice):FALLBACK_POTENTIAL_VALUE;
 
-      const pdaiChange=lastPdaiPrice===null?'flat':pdaiValue>lastPdaiPrice?'up':pdaiValue<lastPdaiPrice?'down':'flat';
-      const crystalChange=lastCrystalPrice===null?'flat':crystalValue>lastCrystalPrice?'up':crystalValue<lastCrystalPrice?'down':'flat';
-
-      priceEl.textContent=formatPdai(pdaiValue);
-      crystalPriceEl.textContent=formatUsd(crystalValue);
-      potentialEl.textContent=formatPotential(potentialValue);
-
-      applyFlash(priceEl,pdaiChange);
-      applyFlash(crystalPriceEl,crystalChange);
-
-      lastPdaiPrice=pdaiValue;
-      lastCrystalPrice=crystalValue;
-    }
-
-    async function updatePrices(){
-      try{
-        const res=await fetch('https://api.dexscreener.com/latest/dex/pairs/pulsechain/0xfc64556faa683e6087f425819c7ca3c558e13ac1');
-        const data=await res.json();
-        const price=parseFloat(data?.pairs?.[0]?.priceUsd);
-        if(!Number.isFinite(price)||price<=0) throw new Error('Invalid price data');
-        renderPrices(price);
-      }catch(err){
-        console.error('Price fetch failed',err);
-        renderPrices(null);
+      const count = Math.floor((app.screen.width * app.screen.height) / 15000 * 1.56);
+      for (let i = 0; i < count; i += 1) {
+        const n = new PIXI.Sprite(nodeTex);
+        n.tint = COLORS[i % COLORS.length];
+        n.anchor.set(0.5);
+        n.x = Math.random() * app.screen.width;
+        n.y = Math.random() * app.screen.height;
+        n.vx = (Math.random() - 0.5) * 0.51;
+        n.vy = (Math.random() - 0.5) * 0.51;
+        n.ix = 0;
+        n.iy = 0;
+        app.stage.addChild(n);
+        nodes.push(n);
       }
     }
-    renderPrices(null);
-    updatePrices();
-    setInterval(updatePrices,1000);
-    document.getElementById('copyBtn').addEventListener('click',()=>navigator.clipboard.writeText('0xA41B5174C803B2F779f4C83d482478b94A240fE6'));
 
-    const infoVideo=document.getElementById('info-video');
-    const videoInteractionEvents=['pointerdown','touchstart','wheel','keydown'];
+    app.ticker.add(() => {
+      lines.clear();
+      for (let i = 0; i < grid.length; i += 1) grid[i].length = 0;
 
-    const ensureVideoPlayback=()=>{
-      if(!infoVideo) return;
-      infoVideo.muted=false;
-      const playAttempt=infoVideo.play();
-      if(playAttempt?.catch){
-        playAttempt.catch(err=>console.warn('Video playback blocked',err));
+      for (const n of nodes) {
+        const idx = Math.floor(n.y / CELL) * cols + Math.floor(n.x / CELL);
+        if (grid[idx]) grid[idx].push(n);
       }
-    };
 
-    const handleVideoInteraction=()=>{
-      ensureVideoPlayback();
-      videoInteractionEvents.forEach(evt=>window.removeEventListener(evt,handleVideoInteraction));
-    };
+      for (const a of nodes) {
+        const col = Math.floor(a.x / CELL);
+        const row = Math.floor(a.y / CELL);
 
-    videoInteractionEvents.forEach(evt=>window.addEventListener(evt,handleVideoInteraction,{passive:true}));
+        for (let dy = -1; dy <= 1; dy += 1) {
+          for (let dx = -1; dx <= 1; dx += 1) {
+            const c = col + dx;
+            const r = row + dy;
+            if (c < 0 || c >= cols || r < 0 || r >= rows) continue;
 
-    const modal=document.getElementById('image-modal');
-    const openModal=document.getElementById('deeper-link');
-    const closeModal=document.getElementById('close-modal');
-
-    const showModal=()=>{
-      modal.style.opacity='1';
-      modal.style.pointerEvents='auto';
-    };
-    const hideModal=()=>{
-      modal.style.opacity='0';
-      modal.style.pointerEvents='none';
-    };
-
-    openModal.addEventListener('click',e=>{
-      e.preventDefault();
-      showModal();
-    });
-    closeModal.addEventListener('click',hideModal);
-    modal.addEventListener('click',e=>{ if(e.target===modal) hideModal(); });
-
-    const FLOWCHART_PATH='canvas_minecraft-economy-flowchart-251030_0147.png';
-    const flowchartTrigger=document.getElementById('flowchart-trigger');
-    const flowchartStatus=document.getElementById('flowchart-status');
-    const flowchartModal=document.getElementById('flowchart-modal');
-    const flowchartClose=document.getElementById('flowchart-close');
-    const flowchartImg=document.getElementById('flowchart-img');
-    const flowchartMissing=document.getElementById('flowchart-missing');
-    let flowchartAvailable=false;
-
-    const showFlowchartModal=(showMissing=false)=>{
-      flowchartModal.style.opacity='1';
-      flowchartModal.style.pointerEvents='auto';
-      if(showMissing){
-        flowchartMissing.style.display='block';
-        flowchartImg.style.display='none';
-      } else {
-        flowchartMissing.style.display='none';
-        flowchartImg.style.display='block';
+            for (const b of grid[r * cols + c]) {
+              if (a === b) continue;
+              const dX = a.x - b.x;
+              const dY = a.y - b.y;
+              const dist = Math.hypot(dX, dY);
+              if (dist < CELL) {
+                lines.lineStyle(1.2, a.tint, ((CELL - dist) / CELL) * 0.4);
+                lines.moveTo(a.x, a.y).lineTo(b.x, b.y);
+              }
+            }
+          }
+        }
       }
-    };
 
-    const hideFlowchartModal=()=>{
-      flowchartModal.style.opacity='0';
-      flowchartModal.style.pointerEvents='none';
-    };
+      for (const n of nodes) {
+        n.x += n.vx + n.ix;
+        n.y += n.vy + n.iy;
+        n.ix *= 0.6;
+        n.iy *= 0.6;
 
-    flowchartTrigger?.addEventListener('click',()=>{
-      if(flowchartAvailable){
-        showFlowchartModal(false);
-      } else {
-        if(flowchartStatus) flowchartStatus.textContent='Flowchart image not found. Place the PNG next to index.html to enable the preview.';
-        flowchartTrigger.classList.add('disabled');
-        showFlowchartModal(true);
+        if (mouse) {
+          const dX = n.x - mouse.x;
+          const dY = n.y - mouse.y;
+          const dist = Math.hypot(dX, dY);
+          if (dist < CELL) {
+            const f = (CELL - dist) / CELL;
+            n.ix += (dX / dist) * 5 * f;
+            n.iy += (dY / dist) * 5 * f;
+          }
+        }
+
+        if (n.x < 0 || n.x > app.screen.width) n.vx *= -1;
+        if (n.y < 0 || n.y > app.screen.height) n.vy *= -1;
       }
     });
-    flowchartClose?.addEventListener('click',hideFlowchartModal);
-    flowchartModal?.addEventListener('click',e=>{ if(e.target===flowchartModal) hideFlowchartModal(); });
 
-    async function checkFlowchartAvailability(){
-      try{
-        const res=await fetch(FLOWCHART_PATH,{method:'HEAD'});
-        if(!res.ok) throw new Error('missing');
-        flowchartAvailable=true;
-        if(flowchartImg) flowchartImg.src=FLOWCHART_PATH;
-        if(flowchartStatus) flowchartStatus.textContent='';
-        flowchartTrigger?.classList.remove('disabled');
-      }catch(err){
-        flowchartAvailable=false;
-        flowchartTrigger?.classList.add('disabled');
-        if(flowchartStatus) flowchartStatus.textContent='Flowchart image not found. Place the PNG next to index.html to enable the preview.';
-      }
+    window.addEventListener('resize', () => {
+      app.renderer.resize(window.innerWidth, window.innerHeight);
+      initBackground();
+    });
+    initBackground();
+
+    const timelineData = [
+      { date: 'May 13 2023', year: 2023.37, price: 1.0, title: '44.37B pDAI airdropped to ETH holders; MakerDAO contracts copied' },
+      { date: 'May 13 2023', year: 2023.37, price: 1.0, title: 'pDAI begins trading with no oracle, governance, or active peg mechanism' },
+      { date: 'Jan 26 2025', year: 2025.07, price: 0.00003, title: 'PSM exploit begins; 4 wallets mint pDAI via sellGem()' },
+      { date: 'Jan–Mar 2025', year: 2025.17, price: 0.034, title: '683M pDAI minted; $3.62M extracted via PSM arbitrage' },
+      { date: 'Mar 2025', year: 2025.2, price: 0.034, title: 'Maria Rahel dumps large pDAI bags for ETH; 69% crash' },
+      { date: 'Mar 2025', year: 2025.22, price: 0.003, title: 'Atropa and BEAR token liquidity cascade triggered' },
+      { date: 'Apr 2025', year: 2025.29, price: 0.034, title: 'ESM fire function called; cage() runs and system enters shutdown' },
+      { date: 'Apr 17 2025', year: 2025.295, price: 0.000002, title: 'pDAI crashes 99.99% post-ESM shutdown' },
+      { date: 'Apr–May 2025', year: 2025.34, price: 0.0006, title: 'Community rebuild begins; pDAI recovery thesis gains traction' },
+      { date: 'May 2025', year: 2025.38, price: 0.0009, title: 'BetterBank launches on PulseChain; first pDAI lending utility' },
+      { date: '2025', year: 2025.6, price: 0.00114, title: 'SOMMI wears pDAI logo necklace at 6th Annual HEX Conference; pDAI +20%' },
+      { date: 'Feb 2026', year: 2026.12, price: 0.00114, title: 'Current state: ~877x from $1 peg, $7.89M liquidity, $495K/day volume' }
+    ];
+
+    function renderTimeline() {
+      const svg = document.getElementById('timeline-chart');
+      const tooltip = document.getElementById('tooltip');
+      const W = 1000;
+      const H = 560;
+      const pad = { top: 24, right: 30, bottom: 45, left: 56 };
+      const innerW = W - pad.left - pad.right;
+      const innerH = H - pad.top - pad.bottom;
+
+      const years = timelineData.map((d) => d.year);
+      const prices = timelineData.map((d) => d.price);
+      const minYear = Math.min(...years);
+      const maxYear = Math.max(...years);
+      const minP = Math.min(...prices);
+      const maxP = Math.max(...prices);
+
+      const logMin = Math.log10(minP);
+      const logMax = Math.log10(maxP);
+
+      const xScale = (v) => pad.left + ((v - minYear) / (maxYear - minYear)) * innerW;
+      const yScale = (v) => pad.top + (1 - ((Math.log10(v) - logMin) / (logMax - logMin))) * innerH;
+
+      const points = timelineData
+        .slice()
+        .sort((a, b) => a.year - b.year)
+        .map((d) => ({ ...d, x: xScale(d.year), y: yScale(d.price) }));
+
+      const path = points.map((p, i) => `${i ? 'L' : 'M'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ');
+      const areaPath = `${path} L ${points[points.length - 1].x.toFixed(2)} ${(H - pad.bottom).toFixed(2)} L ${points[0].x.toFixed(2)} ${(H - pad.bottom).toFixed(2)} Z`;
+
+      const yearTicks = [2023, 2024, 2025, 2026];
+      const priceTicks = [1, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001];
+
+      svg.innerHTML = `
+        <defs>
+          <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#66e0ff"/>
+            <stop offset="45%" stop-color="#8f8bff"/>
+            <stop offset="100%" stop-color="#d36cff"/>
+          </linearGradient>
+          <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="rgba(118, 170, 255, 0.35)"/>
+            <stop offset="100%" stop-color="rgba(118, 170, 255, 0.02)"/>
+          </linearGradient>
+        </defs>
+        ${priceTicks.filter((p) => p >= minP && p <= maxP).map((p) => {
+          const y = yScale(p);
+          return `<line class="grid-line" x1="${pad.left}" y1="${y}" x2="${W - pad.right}" y2="${y}" />
+                  <text class="axis-label" x="8" y="${y + 4}">$${p.toExponential(0)}</text>`;
+        }).join('')}
+        ${yearTicks.map((year) => {
+          const x = xScale(year);
+          return `<line class="grid-line" x1="${x}" y1="${pad.top}" x2="${x}" y2="${H - pad.bottom}" />
+                  <text class="axis-label" x="${x - 14}" y="${H - 15}">${year}</text>`;
+        }).join('')}
+        <path class="price-area" d="${areaPath}" />
+        <path class="price-path" d="${path}" />
+        ${points.map((p) => `<circle class="event-dot" data-date="${p.date}" data-title="${p.title.replace(/"/g, '&quot;')}" cx="${p.x}" cy="${p.y}" r="5" />`).join('')}
+      `;
+
+      const dots = svg.querySelectorAll('.event-dot');
+      const hideTip = () => {
+        tooltip.classList.remove('visible');
+        tooltip.setAttribute('aria-hidden', 'true');
+      };
+
+      dots.forEach((dot) => {
+        dot.addEventListener('mouseenter', (e) => {
+          const t = e.currentTarget;
+          tooltip.innerHTML = `<div class="tooltip-date">${t.dataset.date}</div><div>${t.dataset.title}</div>`;
+          tooltip.classList.add('visible');
+          tooltip.setAttribute('aria-hidden', 'false');
+          dot.setAttribute('r', '7');
+        });
+
+        dot.addEventListener('mousemove', (e) => {
+          const chartRect = svg.getBoundingClientRect();
+          const shellRect = svg.parentElement.getBoundingClientRect();
+          const x = e.clientX - shellRect.left;
+          const y = e.clientY - shellRect.top;
+          tooltip.style.left = `${Math.min(chartRect.width - 20, Math.max(20, x))}px`;
+          tooltip.style.top = `${Math.max(30, y)}px`;
+        });
+
+        dot.addEventListener('mouseleave', () => {
+          dot.setAttribute('r', '5');
+          hideTip();
+        });
+      });
+
+      svg.addEventListener('mouseleave', hideTip);
     }
-    checkFlowchartAvailability();
 
+    renderTimeline();
+    window.addEventListener('resize', renderTimeline);
   </script>
 </body>
 </html>
