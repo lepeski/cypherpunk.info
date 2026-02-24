@@ -172,28 +172,37 @@
     function drawMultiChart() {
       const svg = document.getElementById('multi-chart'); const tip = document.getElementById('multi-tooltip'); const legend = document.getElementById('multi-legend');
       const W=1400,H=700,pad={top:24,right:72,bottom:58,left:42},innerW=W-pad.left-pad.right,innerH=H-pad.top-pad.bottom;
-      const {viewStart,viewEnd,focus}=multiState; const focusAsset = assets[focus];
-      const visible = focusAsset.series.filter(p=>p.ts>=viewStart&&p.ts<=viewEnd&&p.price>0);
-      const rawMin=Math.min(...visible.map(p=>p.price),focusAsset.series.find(p=>p.price>0)?.price||1);
-      const rawMax=Math.max(...visible.map(p=>p.price),rawMin*1.2);
-      const mid=(rawMin+rawMax)/2, half=((rawMax-rawMin)/2)*multiState.scaleFactor;
-      const minP=Math.max(0,mid-half), maxP=Math.max(minP*1.05,mid+half);
+      const {viewStart,viewEnd,focus}=multiState;
       const x=(ts)=>pad.left+((ts-viewStart)/(viewEnd-viewStart))*innerW;
-      const yFocused=(p)=>pad.top+(1-((p-minP)/(maxP-minP)))*innerH;
-      const yGhost=(n)=>pad.top+(1-Math.max(0,Math.min(1,(Math.log10(Math.max(0.2,n))+0.7)/1.6)))*innerH;
-      const ticks = timelineTicks(viewStart, viewEnd); const yTicks = [0,0.25,0.5,0.75,1].map(t=>minP + (maxP-minP)*t);
+      const ticks = timelineTicks(viewStart, viewEnd);
+
+      const yUnified = (normValue) => {
+        const raw = (Math.log10(Math.max(1e-6, normValue)) + 2) / 4;
+        const scaled = ((raw - 0.5) / multiState.scaleFactor) + 0.5;
+        const clamped = Math.max(0, Math.min(1, scaled));
+        return pad.top + (1 - clamped) * innerH;
+      };
+
+      const yTickValues = [0.25,0.5,1,2,4,8,16];
 
       let paths='';
       for (const [k,a] of Object.entries(assets)) {
-        const vis=a.series.filter(p=>p.ts>=viewStart&&p.ts<=viewEnd); if (vis.length<2) continue; const isFocus=k===focus;
-        const pts=isFocus?vis.map(p=>`${x(p.ts).toFixed(2)} ${yFocused(p.price).toFixed(2)}`):vis.map(p=>`${x(p.ts).toFixed(2)} ${yGhost(p.price/(vis.find(v=>v.price>0)?.price||1)).toFixed(2)}`);
+        const vis=a.series.filter(p=>p.ts>=viewStart&&p.ts<=viewEnd); if (vis.length<2) continue;
+        const isFocus=k===focus;
+        const base = a.series.find(v=>v.price>0)?.price || 1;
+        const pts=vis.map(p=>`${x(p.ts).toFixed(2)} ${yUnified(p.price/base).toFixed(2)}`);
         const d=pts.map((pt,i)=>`${i?'L':'M'} ${pt}`).join(' ');
-        paths += `<path d="${d}" fill="none" stroke="${isFocus?a.color:a.ghost}" stroke-width="${isFocus?2.7:1.4}" stroke-linecap="round" stroke-linejoin="round"/>`;
+        paths += `<path d="${d}" fill="none" stroke="${isFocus?a.color:a.ghost}" stroke-width="${isFocus?2.7:1.4}" opacity="${isFocus?1:0.72}" stroke-linecap="round" stroke-linejoin="round"/>`;
       }
 
-      const dots = Object.entries(assets).flatMap(([k,a])=>a.events.filter(e=>e.ts>=viewStart&&e.ts<=viewEnd).map(e=>{const isFocus=k===focus;const vis=a.series.filter(p=>p.ts>=viewStart&&p.ts<=viewEnd);const cy=isFocus?yFocused(e.price):yGhost(e.price/(vis.find(v=>v.price>0)?.price||1));return `<circle class="event-dot" cx="${x(e.ts)}" cy="${cy}" r="${isFocus?5.2:3.8}" style="fill:${isFocus?a.color:a.ghost};stroke:${isFocus?'#e8f6ff':'#7ca2d7'}" data-asset="${k}" data-date="${fmtDate(e.ts)}" data-price="${fmtUsd(e.price)}" data-title="${e.title}"/>`; })).join('');
+      const dots = Object.entries(assets).flatMap(([k,a])=>a.events.filter(e=>e.ts>=viewStart&&e.ts<=viewEnd).map(e=>{
+        const isFocus=k===focus;
+        const base = a.series.find(v=>v.price>0)?.price || 1;
+        const cy=yUnified(e.price/base);
+        return `<circle class="event-dot" cx="${x(e.ts)}" cy="${cy}" r="${isFocus?5.2:3.8}" style="fill:${isFocus?a.color:a.ghost};stroke:${isFocus?'#e8f6ff':'#7ca2d7'};opacity:${isFocus?1:0.8}" data-asset="${k}" data-date="${fmtDate(e.ts)}" data-price="${fmtUsd(e.price)}" data-title="${e.title}"/>`;
+      })).join('');
 
-      svg.innerHTML = `<defs><clipPath id="plotClip2"><rect x="${pad.left}" y="${pad.top}" width="${innerW}" height="${innerH}"/></clipPath></defs>${yTicks.map(v=>`<line class="grid-line" x1="${pad.left}" y1="${yFocused(v)}" x2="${W-pad.right}" y2="${yFocused(v)}"/><text class="axis-label" x="${W-pad.right+8}" y="${yFocused(v)+4}">${fmtUsd(v)}</text>`).join('')}${ticks.quarters.map(t=>`<line class=\"grid-line\" style=\"opacity:.45\" x1=\"${x(t.ts)}\" y1=\"${pad.top}\" x2=\"${x(t.ts)}\" y2=\"${H-pad.bottom}\"/>`).join('')}${ticks.years.map(t=>`<line class=\"grid-line\" style=\"opacity:.9\" x1=\"${x(t.ts)}\" y1=\"${pad.top}\" x2=\"${x(t.ts)}\" y2=\"${H-pad.bottom}\"/><text class=\"axis-label\" x=\"${x(t.ts)-14}\" y=\"${H-18}\">${t.label}</text>`).join('')}<text class="axis-title" x="${W-pad.right+6}" y="14">${focusAsset.name} price axis</text><g clip-path="url(#plotClip2)">${paths}${dots}</g>`;
+      svg.innerHTML = `<defs><clipPath id="plotClip2"><rect x="${pad.left}" y="${pad.top}" width="${innerW}" height="${innerH}"/></clipPath></defs>${yTickValues.map(v=>`<line class="grid-line" x1="${pad.left}" y1="${yUnified(v)}" x2="${W-pad.right}" y2="${yUnified(v)}"/><text class="axis-label" x="${W-pad.right+8}" y="${yUnified(v)+4}">${v}x</text>`).join('')}${ticks.quarters.map(t=>`<line class="grid-line" style="opacity:.45" x1="${x(t.ts)}" y1="${pad.top}" x2="${x(t.ts)}" y2="${H-pad.bottom}"/>`).join('')}${ticks.years.map(t=>`<line class="grid-line" style="opacity:.9" x1="${x(t.ts)}" y1="${pad.top}" x2="${x(t.ts)}" y2="${H-pad.bottom}"/><text class="axis-label" x="${x(t.ts)-14}" y="${H-18}">${t.label}</text>`).join('')}<text class="axis-title" x="${W-pad.right+6}" y="14">Normalized scale (focus: ${assets[focus].name})</text><g clip-path="url(#plotClip2)">${paths}${dots}</g>`;
       legend.innerHTML = Object.entries(assets).map(([k,a])=>`<button class="chip ${focus===k?'active':''}" data-asset="${k}" style="border-color:${a.color}66">${a.name}</button>`).join('');
       legend.querySelectorAll('.chip').forEach(btn=>btn.addEventListener('click',()=>{multiState.focus=btn.dataset.asset;drawMultiChart();}));
 
