@@ -131,9 +131,29 @@
       return { quarters, years };
     };
 
-    const pdaiSeries = [
+    const pdaiAnchors = [
       ['2023-05-13',0.00005],['2023-08-01',0.00012],['2023-10-01',0.00020],['2023-12-15',0.00045],['2024-02-15',0.00120],['2024-04-01',0.00320],['2024-05-01',0.00780],['2024-06-01',0.00500],['2024-07-01',0.00300],['2024-08-15',0.00120],['2024-10-01',0.00100],['2024-12-01',0.00350],['2025-01-01',0.03280],['2025-01-20',0.01500],['2025-02-10',0.02000],['2025-03-01',0.00900],['2025-03-24',0.00280],['2025-04-10',0.00100],['2025-04-17',0.000002],['2025-05-01',0.00060],['2025-06-01',0.00090],['2025-08-01',0.00105],['2025-10-01',0.00110],['2026-02-01',0.00114]
     ].map(([date,price])=>({ts:toTs(date),price}));
+
+    function buildDenseSeries(points, stepDays = 3) {
+      const out = [];
+      const step = 1000 * 60 * 60 * 24 * stepDays;
+      for (let i = 0; i < points.length - 1; i += 1) {
+        const a = points[i], b = points[i + 1];
+        const span = Math.max(step, b.ts - a.ts);
+        const steps = Math.max(1, Math.floor(span / step));
+        for (let j = 0; j < steps; j += 1) {
+          const t = j / steps;
+          const ts = a.ts + (b.ts - a.ts) * t;
+          const price = a.price * Math.pow(Math.max(1e-8, b.price / Math.max(1e-8, a.price)), t);
+          out.push({ ts, price });
+        }
+      }
+      out.push(points[points.length - 1]);
+      return out;
+    }
+
+    const pdaiSeries = buildDenseSeries(pdaiAnchors, 2);
     const pdaiEvents = [['2023-05-13','44.37B pDAI airdropped to ETH holders'],['2025-01-26','PSM exploit period begins'],['2025-03-15','Peak exploit window near $0.034'],['2025-04-17','ESM shutdown crash wick lows'],['2026-02-01','Current zone around $0.00114']].map(([d,t])=>{const ts=toTs(d);const n=pdaiSeries.reduce((a,b)=>Math.abs(b.ts-ts)<Math.abs(a.ts-ts)?b:a,pdaiSeries[0]);return{ts:n.ts,price:n.price,title:t};});
 
     const assets = {
@@ -144,103 +164,6 @@
     };
 
     for (const key of Object.keys(assets)) if (key !== 'pdai') assets[key].events = assets[key].events.map(([d,t])=>{const ts=toTs(d); const n=assets[key].series.reduce((a,b)=>Math.abs(b.ts-ts)<Math.abs(a.ts-ts)?b:a,assets[key].series[0]); return {ts:n.ts,price:n.price,title:t};});
-
-    const LIVE_CONFIG = {
-      pdaiPair: { chain: 'pulsechain', pair: '0x25a72131d02081eef532192e7be1144e139e165e' },
-      pollMs: 5000,
-      requestTimeoutMs: 4500,
-      geckoPool: '0x25a72131d02081eef532192e7be1144e139e165e',
-      history: { timeframe: 'hour', aggregate: 1, limit: 1000 },
-    };
-
-    function appendLivePoint(assetKey, ts, price) {
-      const asset = assets[assetKey];
-      if (!asset || !Number.isFinite(price) || price <= 0) return;
-      const last = asset.series[asset.series.length - 1];
-      if (last && ts - last.ts < 2500) {
-        last.ts = ts;
-        last.price = price;
-      } else {
-        asset.series.push({ ts, price });
-      }
-      const cutoff = ts - (1000 * 60 * 60 * 24 * 365 * 8);
-      while (asset.series.length > 2 && asset.series[0].ts < cutoff) asset.series.shift();
-    }
-
-    async function fetchJson(url, options = {}) {
-      const controller = new AbortController();
-      const t = setTimeout(() => controller.abort(), LIVE_CONFIG.requestTimeoutMs);
-      try {
-        const res = await fetch(url, { ...options, signal: controller.signal });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return await res.json();
-      } finally {
-        clearTimeout(t);
-      }
-    }
-
-    async function fetchPdaiDexScreenerPrice() {
-      const { chain, pair } = LIVE_CONFIG.pdaiPair;
-      const data = await fetchJson(`https://api.dexscreener.com/latest/dex/pairs/${chain}/${pair}`);
-      const price = Number(data?.pair?.priceUsd);
-      if (!Number.isFinite(price) || price <= 0) throw new Error('No valid pDAI DexScreener price');
-      return price;
-    }
-
-    async function fetchPdaiHistoricalSeries() {
-      const { geckoPool, history } = LIVE_CONFIG;
-      const url = `https://api.geckoterminal.com/api/v2/networks/pulsechain/pools/${geckoPool}/ohlcv/${history.timeframe}?aggregate=${history.aggregate}&limit=${history.limit}`;
-      const data = await fetchJson(url);
-      const list = data?.data?.attributes?.ohlcv_list;
-      if (!Array.isArray(list) || !list.length) throw new Error('No historical OHLCV data');
-      const mapped = list
-        .map((row) => ({ ts: Number(row?.[0]) * 1000, price: Number(row?.[4]) }))
-        .filter((p) => Number.isFinite(p.ts) && Number.isFinite(p.price) && p.price > 0)
-        .sort((a,b) => a.ts - b.ts);
-      if (mapped.length < 10) throw new Error('Insufficient historical OHLCV points');
-      return mapped;
-    }
-
-    async function hydratePdaiHistory() {
-      try {
-        const series = await fetchPdaiHistoricalSeries();
-        assets.pdai.series.length = 0;
-        assets.pdai.series.push(...series);
-
-        for (const ev of assets.pdai.events) {
-          const nearest = assets.pdai.series.reduce((a, b) => Math.abs(b.ts - ev.ts) < Math.abs(a.ts - ev.ts) ? b : a, assets.pdai.series[0]);
-          ev.ts = nearest.ts;
-          ev.price = nearest.price;
-        }
-      } catch (err) {
-        console.warn('Historical pDAI load failed, using fallback seed series', err);
-      }
-    }
-
-    let pollBusy = false;
-    async function refreshLiveData() {
-      if (pollBusy) return;
-      pollBusy = true;
-      try {
-        const pdai = await fetchPdaiDexScreenerPrice();
-        const now = Date.now();
-        appendLivePoint('pdai', now, pdai);
-
-        multiState.maxTs = Math.max(...Object.values(assets).flatMap(a=>a.series.map(p=>p.ts)));
-        if (multiState.viewEnd >= multiState.maxTs - 20000) {
-          const span = multiState.viewEnd - multiState.viewStart;
-          multiState.viewEnd = multiState.maxTs;
-          multiState.viewStart = Math.max(multiState.minTs, multiState.viewEnd - span);
-        }
-
-        drawSingleChart();
-        drawMultiChart();
-      } catch (err) {
-        console.warn('pDAI live refresh failed', err);
-      } finally {
-        pollBusy = false;
-      }
-    }
 
     function placeTooltip(tip, ev, container) {
       const r = container.getBoundingClientRect();
@@ -381,13 +304,10 @@
 
     window.addEventListener('resize',()=>{app.renderer.resize(window.innerWidth,window.innerHeight);initBackground();drawSingleChart();drawMultiChart();});
 
-    async function bootstrapCharts() {
+    function bootstrapCharts() {
       initBackground();
-      await hydratePdaiHistory();
       drawSingleChart();
       drawMultiChart();
-      await refreshLiveData();
-      setInterval(refreshLiveData, LIVE_CONFIG.pollMs);
     }
 
     bootstrapCharts();
