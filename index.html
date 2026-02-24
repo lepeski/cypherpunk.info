@@ -9,157 +9,137 @@
     html, body {
       width: 100%;
       min-height: 100%;
-      overflow: auto;
       background: #000;
       font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
       color: #dceaff;
     }
-
-    #canvas-container {
-      position: fixed;
-      inset: 0;
-    }
+    #canvas-container { position: fixed; inset: 0; }
 
     .content {
       position: relative;
       z-index: 1;
-      max-width: 1100px;
-      width: min(95%, 1100px);
-      margin: 2.2rem auto;
-      background: rgba(4, 9, 22, 0.58);
+      width: min(96%, 1260px);
+      margin: 1.25rem auto;
+      background: rgba(4, 9, 22, 0.62);
       border: 1px solid rgba(132, 207, 255, 0.24);
       border-radius: 18px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), 0 0 40px rgba(58, 133, 240, 0.22);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.45), 0 0 40px rgba(58, 133, 240, 0.2);
       backdrop-filter: blur(4px);
-      padding: 1.2rem 1.2rem 1.5rem;
+      padding: 1rem;
     }
 
-    .header {
-      display: flex;
-      flex-wrap: wrap;
-      gap: .8rem;
-      justify-content: space-between;
-      align-items: baseline;
-      margin-bottom: 1rem;
-      padding: .6rem .6rem 0;
-    }
-
+    .header { display:flex; justify-content:space-between; gap:.8rem; flex-wrap:wrap; padding:.4rem .5rem .7rem; }
     .title {
-      font-size: clamp(1.1rem, 2.8vw, 1.8rem);
+      font-size: clamp(1.1rem, 2.7vw, 1.9rem);
       letter-spacing: .1em;
       text-transform: uppercase;
       background: linear-gradient(90deg, #54e5ff, #8f8bff 45%, #ca65ff 90%);
-      -webkit-background-clip: text;
-      background-clip: text;
+      -webkit-background-clip:text;
       color: transparent;
     }
-
-    .subtitle {
-      font-size: .85rem;
-      color: #9bb8db;
-      letter-spacing: .04em;
-    }
+    .subtitle { color:#a8c3e6; font-size:.86rem; }
 
     .chart-shell {
       position: relative;
-      width: 100%;
-      overflow: hidden;
       border-radius: 14px;
       border: 1px solid rgba(143, 200, 255, .2);
       background:
-        radial-gradient(1000px 220px at 20% 0%, rgba(83, 105, 255, .14), transparent 60%),
-        radial-gradient(820px 280px at 90% 100%, rgba(84, 229, 255, .12), transparent 70%),
-        rgba(3, 12, 29, .55);
-      padding: .6rem;
+        radial-gradient(1200px 320px at 20% 0%, rgba(83, 105, 255, .15), transparent 60%),
+        radial-gradient(920px 300px at 90% 100%, rgba(84, 229, 255, .12), transparent 70%),
+        rgba(3, 12, 29, .6);
+      overflow: hidden;
+      padding: .65rem;
     }
 
-    svg {
-      width: 100%;
-      height: min(68vh, 560px);
-      min-height: 320px;
-      display: block;
-    }
+    svg { width:100%; height:min(75vh,680px); min-height:430px; display:block; }
 
-    .grid-line { stroke: rgba(130, 170, 230, 0.2); stroke-width: 1; }
-    .axis-label { fill: rgba(160, 191, 229, 0.85); font-size: 11px; }
+    .grid-line { stroke: rgba(130, 170, 230, 0.16); stroke-width: 1; }
+    .axis-label { fill: rgba(175, 206, 242, .92); font-size: 12px; }
+    .axis-title { fill: rgba(130, 188, 255, .95); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; }
     .price-path {
       fill: none;
       stroke: url(#lineGradient);
-      stroke-width: 3;
+      stroke-width: 2.8;
       stroke-linecap: round;
       stroke-linejoin: round;
       filter: drop-shadow(0 0 10px rgba(109, 208, 255, 0.35));
     }
     .price-area { fill: url(#areaGradient); }
-
     .event-dot {
-      fill: #bdf2ff;
-      stroke: rgba(32, 134, 238, 0.9);
+      fill: #d5f8ff;
+      stroke: rgba(55, 160, 255, 0.95);
       stroke-width: 1.5;
       cursor: pointer;
-      transition: r .18s ease, filter .18s ease;
+      transition: r .15s ease;
     }
-    .event-dot:hover {
-      filter: drop-shadow(0 0 8px rgba(131, 217, 255, .95));
-    }
+    .event-dot:hover { filter: drop-shadow(0 0 8px rgba(131, 217, 255, .95)); }
 
     .tooltip {
       position: absolute;
-      pointer-events: none;
-      min-width: 220px;
-      max-width: min(88vw, 380px);
-      background: rgba(8, 18, 40, 0.92);
-      border: 1px solid rgba(134, 201, 255, 0.4);
+      pointer-events:none;
+      min-width:230px;
+      max-width:min(92vw,390px);
+      background: rgba(8, 18, 40, .95);
+      border: 1px solid rgba(134, 201, 255, .4);
       border-radius: 10px;
-      color: #dbedff;
-      padding: .65rem .78rem;
-      font-size: .78rem;
-      line-height: 1.42;
-      box-shadow: 0 14px 25px rgba(0, 0, 0, .4);
-      opacity: 0;
+      color:#dbedff;
+      padding:.66rem .78rem;
+      font-size:.79rem;
+      line-height:1.42;
+      opacity:0;
       transform: translate(-50%, -110%) scale(.98);
-      transition: opacity .14s ease, transform .14s ease;
+      transition: opacity .13s ease, transform .13s ease;
+      box-shadow: 0 14px 25px rgba(0,0,0,.4);
+      z-index:4;
     }
-    .tooltip.visible {
-      opacity: 1;
-      transform: translate(-50%, -115%) scale(1);
-    }
-    .tooltip-date { color: #90b8ff; font-size: .72rem; margin-bottom: .25rem; }
+    .tooltip.visible { opacity:1; transform: translate(-50%, -115%) scale(1); }
+    .tooltip-date { color:#8fb4ff; font-size:.73rem; margin-bottom:.2rem; }
+    .tooltip-price { color:#7ce4ff; font-size:.73rem; margin-bottom:.25rem; }
 
-    @media (max-width: 700px) {
-      .content { padding: .8rem .7rem 1rem; margin: 1rem auto; }
-      .chart-shell { padding: .35rem; }
-      svg { height: 62vh; min-height: 300px; }
+    .events-readout {
+      margin-top: .75rem;
+      display:grid;
+      gap: .4rem;
+      max-height: 180px;
+      overflow: auto;
+      padding-right: .2rem;
+    }
+    .event-item {
+      background: rgba(6, 17, 38, 0.55);
+      border: 1px solid rgba(97, 162, 220, 0.22);
+      border-radius: 8px;
+      padding: .45rem .6rem;
+      color: #c8def7;
+      font-size: .78rem;
+    }
+    .event-item b { color: #80e7ff; margin-right: .4rem; }
+
+    @media (max-width: 760px) {
+      .content { padding: .65rem; }
+      .chart-shell { padding: .3rem; }
+      svg { height: 66vh; min-height: 360px; }
     }
   </style>
 </head>
 <body>
   <div id="canvas-container"></div>
-
   <main class="content">
     <div class="header">
       <h1 class="title">pDAI Price Timeline</h1>
-      <p class="subtitle">Hover markers to view event titles</p>
+      <p class="subtitle">Quarterly time axis + revised curve closer to DEX-style history</p>
     </div>
 
-    <section class="chart-shell" aria-label="pDAI timeline chart">
-      <svg id="timeline-chart" viewBox="0 0 1000 560" preserveAspectRatio="xMidYMid meet"></svg>
+    <section class="chart-shell">
+      <svg id="timeline-chart" viewBox="0 0 1400 760" preserveAspectRatio="xMidYMid meet"></svg>
       <div id="tooltip" class="tooltip" role="tooltip" aria-hidden="true"></div>
     </section>
+
+    <section id="event-list" class="events-readout" aria-label="Event list"></section>
   </main>
 
   <script src="https://pixijs.download/v6.5.8/pixi.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/pixi-filters@4.2.0/dist/pixi-filters.js"></script>
   <script>
-    const app = new PIXI.Application({
-      autoDensity: true,
-      antialias: true,
-      backgroundAlpha: 0,
-      width: window.innerWidth,
-      height: window.innerHeight,
-      resolution: window.devicePixelRatio || 1
-    });
-
+    const app = new PIXI.Application({ autoDensity:true, antialias:true, backgroundAlpha:0, width:window.innerWidth, height:window.innerHeight, resolution:window.devicePixelRatio||1 });
     document.getElementById('canvas-container').appendChild(app.view);
     app.ticker.maxFPS = 120;
 
@@ -168,21 +148,17 @@
     let rows = 0;
     const grid = [];
     const nodes = [];
-
     const tmpG = new PIXI.Graphics();
-    tmpG.beginFill(0xffffff);
-    tmpG.drawCircle(0, 0, 1.5);
-    tmpG.endFill();
+    tmpG.beginFill(0xffffff); tmpG.drawCircle(0,0,1.5); tmpG.endFill();
     const nodeTex = app.renderer.generateTexture(tmpG);
-
     const COLORS = [0xaa00ff, 0x00aaff, 0x004de6];
     const lines = new PIXI.Graphics();
     lines.blendMode = PIXI.BLEND_MODES.ADD;
     app.stage.addChild(lines);
 
     let mouse = null;
-    window.addEventListener('mousemove', (e) => { mouse = { x: e.clientX, y: e.clientY }; });
-    window.addEventListener('mouseleave', () => { mouse = null; });
+    window.addEventListener('mousemove', e => mouse = { x:e.clientX, y:e.clientY });
+    window.addEventListener('mouseleave', () => mouse = null);
 
     function initBackground() {
       cols = Math.ceil(app.screen.width / CELL);
@@ -192,7 +168,6 @@
       nodes.length = 0;
       app.stage.removeChildren();
       app.stage.addChild(lines);
-
       const count = Math.floor((app.screen.width * app.screen.height) / 15000 * 1.56);
       for (let i = 0; i < count; i += 1) {
         const n = new PIXI.Sprite(nodeTex);
@@ -202,8 +177,7 @@
         n.y = Math.random() * app.screen.height;
         n.vx = (Math.random() - 0.5) * 0.51;
         n.vy = (Math.random() - 0.5) * 0.51;
-        n.ix = 0;
-        n.iy = 0;
+        n.ix = 0; n.iy = 0;
         app.stage.addChild(n);
         nodes.push(n);
       }
@@ -212,138 +186,147 @@
     app.ticker.add(() => {
       lines.clear();
       for (let i = 0; i < grid.length; i += 1) grid[i].length = 0;
-
       for (const n of nodes) {
         const idx = Math.floor(n.y / CELL) * cols + Math.floor(n.x / CELL);
         if (grid[idx]) grid[idx].push(n);
       }
-
       for (const a of nodes) {
         const col = Math.floor(a.x / CELL);
         const row = Math.floor(a.y / CELL);
-
-        for (let dy = -1; dy <= 1; dy += 1) {
-          for (let dx = -1; dx <= 1; dx += 1) {
-            const c = col + dx;
-            const r = row + dy;
-            if (c < 0 || c >= cols || r < 0 || r >= rows) continue;
-
-            for (const b of grid[r * cols + c]) {
-              if (a === b) continue;
-              const dX = a.x - b.x;
-              const dY = a.y - b.y;
-              const dist = Math.hypot(dX, dY);
-              if (dist < CELL) {
-                lines.lineStyle(1.2, a.tint, ((CELL - dist) / CELL) * 0.4);
-                lines.moveTo(a.x, a.y).lineTo(b.x, b.y);
-              }
+        for (let dy = -1; dy <= 1; dy += 1) for (let dx = -1; dx <= 1; dx += 1) {
+          const c = col + dx, r = row + dy;
+          if (c < 0 || c >= cols || r < 0 || r >= rows) continue;
+          for (const b of grid[r * cols + c]) {
+            if (a === b) continue;
+            const dX = a.x - b.x, dY = a.y - b.y, dist = Math.hypot(dX, dY);
+            if (dist < CELL) {
+              lines.lineStyle(1.2, a.tint, ((CELL - dist) / CELL) * 0.4);
+              lines.moveTo(a.x, a.y).lineTo(b.x, b.y);
             }
           }
         }
       }
-
       for (const n of nodes) {
-        n.x += n.vx + n.ix;
-        n.y += n.vy + n.iy;
-        n.ix *= 0.6;
-        n.iy *= 0.6;
-
+        n.x += n.vx + n.ix; n.y += n.vy + n.iy;
+        n.ix *= 0.6; n.iy *= 0.6;
         if (mouse) {
-          const dX = n.x - mouse.x;
-          const dY = n.y - mouse.y;
-          const dist = Math.hypot(dX, dY);
-          if (dist < CELL) {
+          const dX = n.x - mouse.x, dY = n.y - mouse.y, dist = Math.hypot(dX, dY);
+          if (dist < CELL && dist > 0.1) {
             const f = (CELL - dist) / CELL;
             n.ix += (dX / dist) * 5 * f;
             n.iy += (dY / dist) * 5 * f;
           }
         }
-
         if (n.x < 0 || n.x > app.screen.width) n.vx *= -1;
         if (n.y < 0 || n.y > app.screen.height) n.vy *= -1;
       }
     });
 
-    window.addEventListener('resize', () => {
-      app.renderer.resize(window.innerWidth, window.innerHeight);
-      initBackground();
-    });
-    initBackground();
+    const series = [
+      ['2023-05-13', 0.00005], ['2023-08-01', 0.00012], ['2023-10-01', 0.00020], ['2023-12-15', 0.00045],
+      ['2024-02-15', 0.00120], ['2024-04-01', 0.00320], ['2024-05-01', 0.00780], ['2024-06-01', 0.00500],
+      ['2024-07-01', 0.00300], ['2024-08-15', 0.00120], ['2024-10-01', 0.00100], ['2024-12-01', 0.00350],
+      ['2025-01-01', 0.03280], ['2025-01-20', 0.01500], ['2025-02-10', 0.02000], ['2025-03-01', 0.00900],
+      ['2025-03-24', 0.00280], ['2025-04-10', 0.00100], ['2025-04-17', 0.000002], ['2025-05-01', 0.00060],
+      ['2025-06-01', 0.00090], ['2025-08-01', 0.00105], ['2025-10-01', 0.00110], ['2026-02-01', 0.00114]
+    ].map(([date, price]) => ({ date, price, ts: new Date(date).getTime() }));
 
-    const timelineData = [
-      { date: 'May 13 2023', year: 2023.37, price: 1.0, title: '44.37B pDAI airdropped to ETH holders; MakerDAO contracts copied' },
-      { date: 'May 13 2023', year: 2023.37, price: 1.0, title: 'pDAI begins trading with no oracle, governance, or active peg mechanism' },
-      { date: 'Jan 26 2025', year: 2025.07, price: 0.00003, title: 'PSM exploit begins; 4 wallets mint pDAI via sellGem()' },
-      { date: 'Jan–Mar 2025', year: 2025.17, price: 0.034, title: '683M pDAI minted; $3.62M extracted via PSM arbitrage' },
-      { date: 'Mar 2025', year: 2025.2, price: 0.034, title: 'Maria Rahel dumps large pDAI bags for ETH; 69% crash' },
-      { date: 'Mar 2025', year: 2025.22, price: 0.003, title: 'Atropa and BEAR token liquidity cascade triggered' },
-      { date: 'Apr 2025', year: 2025.29, price: 0.034, title: 'ESM fire function called; cage() runs and system enters shutdown' },
-      { date: 'Apr 17 2025', year: 2025.295, price: 0.000002, title: 'pDAI crashes 99.99% post-ESM shutdown' },
-      { date: 'Apr–May 2025', year: 2025.34, price: 0.0006, title: 'Community rebuild begins; pDAI recovery thesis gains traction' },
-      { date: 'May 2025', year: 2025.38, price: 0.0009, title: 'BetterBank launches on PulseChain; first pDAI lending utility' },
-      { date: '2025', year: 2025.6, price: 0.00114, title: 'SOMMI wears pDAI logo necklace at 6th Annual HEX Conference; pDAI +20%' },
-      { date: 'Feb 2026', year: 2026.12, price: 0.00114, title: 'Current state: ~877x from $1 peg, $7.89M liquidity, $495K/day volume' }
-    ];
+    const events = [
+      { date: '2023-05-13', price: 0.00005, title: '44.37B pDAI airdropped to ETH holders; MakerDAO contracts copied' },
+      { date: '2025-01-26', price: 0.015, title: 'PSM exploit period begins; supply expansion accelerates' },
+      { date: '2025-03-15', price: 0.034, title: 'Peak exploit window: pDAI reaches local top near $0.034' },
+      { date: '2025-03-24', price: 0.0028, title: 'Cascade crash phase after major distribution / liquidity shocks' },
+      { date: '2025-04-17', price: 0.000002, title: 'ESM shutdown crash: pDAI prints deep wick lows' },
+      { date: '2025-06-01', price: 0.0009, title: 'BetterBank utility and rebuild narrative stabilize recovery zone' },
+      { date: '2026-02-01', price: 0.00114, title: 'Current zone around $0.00114 with active liquidity/volume' }
+    ].map(e => ({ ...e, ts: new Date(e.date).getTime() }));
+
+    function formatDate(ts) {
+      return new Date(ts).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
+    }
+    function formatPrice(v) {
+      if (v >= 0.01) return `$${v.toFixed(4)}`;
+      if (v >= 0.001) return `$${v.toFixed(5)}`;
+      if (v >= 0.0001) return `$${v.toFixed(6)}`;
+      return `$${v.toExponential(2)}`;
+    }
+
+    function quarterTicks(startTs, endTs) {
+      const ticks = [];
+      const d = new Date(startTs);
+      const startQuarterMonth = Math.floor(d.getUTCMonth() / 3) * 3;
+      let cursor = Date.UTC(d.getUTCFullYear(), startQuarterMonth, 1);
+      if (cursor < startTs) cursor = Date.UTC(d.getUTCFullYear(), startQuarterMonth + 3, 1);
+      while (cursor <= endTs) {
+        const dd = new Date(cursor);
+        const month = dd.toLocaleString(undefined, { month: 'short', timeZone: 'UTC' });
+        const yr = String(dd.getUTCFullYear()).slice(-2);
+        ticks.push({ ts: cursor, label: `${month} '${yr}` });
+        cursor = Date.UTC(dd.getUTCFullYear(), dd.getUTCMonth() + 3, 1);
+      }
+      return ticks;
+    }
 
     function renderTimeline() {
       const svg = document.getElementById('timeline-chart');
       const tooltip = document.getElementById('tooltip');
-      const W = 1000;
-      const H = 560;
-      const pad = { top: 24, right: 30, bottom: 45, left: 56 };
+      const list = document.getElementById('event-list');
+      const W = 1400, H = 760;
+      const pad = { top: 28, right: 42, bottom: 72, left: 88 };
       const innerW = W - pad.left - pad.right;
       const innerH = H - pad.top - pad.bottom;
 
-      const years = timelineData.map((d) => d.year);
-      const prices = timelineData.map((d) => d.price);
-      const minYear = Math.min(...years);
-      const maxYear = Math.max(...years);
-      const minP = Math.min(...prices);
-      const maxP = Math.max(...prices);
+      const minTs = Math.min(...series.map(d => d.ts));
+      const maxTs = Math.max(...series.map(d => d.ts));
+      const minPrice = 0;
+      const maxPrice = 0.035;
 
-      const logMin = Math.log10(minP);
-      const logMax = Math.log10(maxP);
+      const x = (ts) => pad.left + ((ts - minTs) / (maxTs - minTs)) * innerW;
+      const y = (price) => pad.top + (1 - ((price - minPrice) / (maxPrice - minPrice))) * innerH;
 
-      const xScale = (v) => pad.left + ((v - minYear) / (maxYear - minYear)) * innerW;
-      const yScale = (v) => pad.top + (1 - ((Math.log10(v) - logMin) / (logMax - logMin))) * innerH;
+      const linePts = series.map(d => ({ ...d, x: x(d.ts), y: y(d.price) }));
+      const path = linePts.map((p,i) => `${i ? 'L':'M'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ');
+      const areaPath = `${path} L ${linePts[linePts.length-1].x.toFixed(2)} ${H-pad.bottom} L ${linePts[0].x.toFixed(2)} ${H-pad.bottom} Z`;
 
-      const points = timelineData
-        .slice()
-        .sort((a, b) => a.year - b.year)
-        .map((d) => ({ ...d, x: xScale(d.year), y: yScale(d.price) }));
-
-      const path = points.map((p, i) => `${i ? 'L' : 'M'} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(' ');
-      const areaPath = `${path} L ${points[points.length - 1].x.toFixed(2)} ${(H - pad.bottom).toFixed(2)} L ${points[0].x.toFixed(2)} ${(H - pad.bottom).toFixed(2)} Z`;
-
-      const yearTicks = [2023, 2024, 2025, 2026];
-      const priceTicks = [1, 0.1, 0.01, 0.001, 0.0001, 0.00001, 0.000001];
+      const yTicks = [0,0.005,0.01,0.015,0.02,0.025,0.03,0.035];
+      const xTicks = quarterTicks(minTs, maxTs);
 
       svg.innerHTML = `
         <defs>
           <linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stop-color="#66e0ff"/>
-            <stop offset="45%" stop-color="#8f8bff"/>
-            <stop offset="100%" stop-color="#d36cff"/>
+            <stop offset="0%" stop-color="#66e0ff" />
+            <stop offset="45%" stop-color="#8f8bff" />
+            <stop offset="100%" stop-color="#d36cff" />
           </linearGradient>
           <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stop-color="rgba(118, 170, 255, 0.35)"/>
-            <stop offset="100%" stop-color="rgba(118, 170, 255, 0.02)"/>
+            <stop offset="0%" stop-color="rgba(118,170,255,0.35)" />
+            <stop offset="100%" stop-color="rgba(118,170,255,0.03)" />
           </linearGradient>
+          <clipPath id="plotClip"><rect x="${pad.left}" y="${pad.top}" width="${innerW}" height="${innerH}" /></clipPath>
         </defs>
-        ${priceTicks.filter((p) => p >= minP && p <= maxP).map((p) => {
-          const y = yScale(p);
-          return `<line class="grid-line" x1="${pad.left}" y1="${y}" x2="${W - pad.right}" y2="${y}" />
-                  <text class="axis-label" x="8" y="${y + 4}">$${p.toExponential(0)}</text>`;
-        }).join('')}
-        ${yearTicks.map((year) => {
-          const x = xScale(year);
-          return `<line class="grid-line" x1="${x}" y1="${pad.top}" x2="${x}" y2="${H - pad.bottom}" />
-                  <text class="axis-label" x="${x - 14}" y="${H - 15}">${year}</text>`;
-        }).join('')}
-        <path class="price-area" d="${areaPath}" />
-        <path class="price-path" d="${path}" />
-        ${points.map((p) => `<circle class="event-dot" data-date="${p.date}" data-title="${p.title.replace(/"/g, '&quot;')}" cx="${p.x}" cy="${p.y}" r="5" />`).join('')}
+
+        ${yTicks.map(v => `
+          <line class="grid-line" x1="${pad.left}" y1="${y(v)}" x2="${W-pad.right}" y2="${y(v)}" />
+          <text class="axis-label" x="14" y="${y(v)+4}">${formatPrice(v)}</text>
+        `).join('')}
+
+        ${xTicks.map((t, idx) => `
+          <line class="grid-line" x1="${x(t.ts)}" y1="${pad.top}" x2="${x(t.ts)}" y2="${H-pad.bottom}" />
+          <text class="axis-label" x="${x(t.ts)-24}" y="${H-18}">${t.label}</text>
+          ${idx % 4 === 0 ? `<text class="axis-label" x="${x(t.ts)-12}" y="${H-34}">Q${(new Date(t.ts).getUTCMonth()/3)+1}</text>` : ''}
+        `).join('')}
+
+        <text class="axis-title" x="${W/2-95}" y="${H-2}">Timeline (Quarterly markers)</text>
+        <text class="axis-title" x="18" y="18">pDAI Price USD</text>
+
+        <g clip-path="url(#plotClip)">
+          <path class="price-area" d="${areaPath}" />
+          <path class="price-path" d="${path}" />
+          ${events.map(e => `<circle class="event-dot" cx="${x(e.ts)}" cy="${y(e.price)}" r="5.2" data-date="${formatDate(e.ts)}" data-price="${formatPrice(e.price)}" data-title="${e.title.replace(/"/g,'&quot;')}"/>`).join('')}
+        </g>
       `;
+
+      list.innerHTML = events.map(e => `<div class="event-item"><b>${formatDate(e.ts)}</b>${e.title}</div>`).join('');
 
       const dots = svg.querySelectorAll('.event-dot');
       const hideTip = () => {
@@ -351,35 +334,39 @@
         tooltip.setAttribute('aria-hidden', 'true');
       };
 
-      dots.forEach((dot) => {
-        dot.addEventListener('mouseenter', (e) => {
-          const t = e.currentTarget;
-          tooltip.innerHTML = `<div class="tooltip-date">${t.dataset.date}</div><div>${t.dataset.title}</div>`;
+      dots.forEach(dot => {
+        dot.addEventListener('mouseenter', (ev) => {
+          const t = ev.currentTarget;
+          tooltip.innerHTML = `<div class="tooltip-date">${t.dataset.date}</div><div class="tooltip-price">${t.dataset.price}</div><div>${t.dataset.title}</div>`;
           tooltip.classList.add('visible');
           tooltip.setAttribute('aria-hidden', 'false');
-          dot.setAttribute('r', '7');
+          dot.setAttribute('r', '7.4');
         });
-
-        dot.addEventListener('mousemove', (e) => {
-          const chartRect = svg.getBoundingClientRect();
-          const shellRect = svg.parentElement.getBoundingClientRect();
-          const x = e.clientX - shellRect.left;
-          const y = e.clientY - shellRect.top;
-          tooltip.style.left = `${Math.min(chartRect.width - 20, Math.max(20, x))}px`;
-          tooltip.style.top = `${Math.max(30, y)}px`;
+        dot.addEventListener('mousemove', (ev) => {
+          const hostRect = svg.parentElement.getBoundingClientRect();
+          let px = ev.clientX - hostRect.left;
+          let py = ev.clientY - hostRect.top;
+          px = Math.min(hostRect.width - 14, Math.max(14, px));
+          py = Math.min(hostRect.height - 20, Math.max(34, py));
+          tooltip.style.left = `${px}px`;
+          tooltip.style.top = `${py}px`;
         });
-
         dot.addEventListener('mouseleave', () => {
-          dot.setAttribute('r', '5');
+          dot.setAttribute('r', '5.2');
           hideTip();
         });
       });
-
       svg.addEventListener('mouseleave', hideTip);
     }
 
+    window.addEventListener('resize', () => {
+      app.renderer.resize(window.innerWidth, window.innerHeight);
+      initBackground();
+      renderTimeline();
+    });
+
+    initBackground();
     renderTimeline();
-    window.addEventListener('resize', renderTimeline);
   </script>
 </body>
 </html>
