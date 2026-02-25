@@ -34,6 +34,13 @@
     .tooltip.visible { opacity:1; transform: scale(1); }
     .tooltip-date { color:#8fb4ff; font-size:.72rem; margin-bottom:.14rem; }
     .tooltip-price { color:#7ce4ff; font-size:.72rem; margin-bottom:.2rem; }
+    .single-toolbar { display:flex; justify-content:space-between; gap:.6rem; flex-wrap:wrap; padding:.1rem .15rem .5rem; align-items:center; }
+    .single-stats { display:flex; gap:.7rem; flex-wrap:wrap; }
+    .single-stat { border:1px solid rgba(134,201,255,.24); background:rgba(8,18,40,.42); border-radius:10px; padding:.26rem .5rem; font-size:.72rem; color:#a9cbeb; }
+    .single-stat b { color:#dff5ff; font-weight:600; margin-left:.25rem; }
+    .range-controls { display:flex; gap:.35rem; }
+    .range-chip { border:1px solid rgba(144,193,255,.24); background:rgba(9,22,45,.66); color:#c9e7ff; border-radius:999px; padding:.2rem .5rem; font-size:.72rem; cursor:pointer; }
+    .range-chip.active { border-color: rgba(116, 227, 255, .75); box-shadow: 0 0 12px rgba(92, 206, 255, .22) inset; }
     @media (max-width: 760px) { .window { padding: .65rem; } .chart-shell { padding: .3rem; } svg, #multi-chart { height: 64vh; min-height: 340px; } }
   </style>
 </head>
@@ -46,6 +53,20 @@
         <p class="subtitle">Tooltip-only events • clean quarterly x-axis</p>
       </div>
       <section class="chart-shell">
+        <div class="single-toolbar">
+          <div class="single-stats">
+            <span class="single-stat">Current <b id="stat-current">-</b></span>
+            <span class="single-stat">ATH <b id="stat-ath">-</b></span>
+            <span class="single-stat">ATL <b id="stat-atl">-</b></span>
+            <span class="single-stat">Change <b id="stat-change">-</b></span>
+          </div>
+          <div class="range-controls" id="single-range-controls">
+            <button class="range-chip" data-range="6M">6M</button>
+            <button class="range-chip" data-range="1Y">1Y</button>
+            <button class="range-chip" data-range="2Y">2Y</button>
+            <button class="range-chip active" data-range="ALL">ALL</button>
+          </div>
+        </div>
         <div id="single-chart" aria-label="pDAI chart"></div>
         <div id="single-tooltip" class="tooltip" role="tooltip" aria-hidden="true"></div>
       </section>
@@ -132,7 +153,11 @@
     };
 
     const pdaiAnchors = [
-      ['2023-05-13',0.00005],['2023-08-01',0.00012],['2023-10-01',0.00020],['2023-12-15',0.00045],['2024-02-15',0.00120],['2024-04-01',0.00320],['2024-05-01',0.00780],['2024-06-01',0.00500],['2024-07-01',0.00300],['2024-08-15',0.00120],['2024-10-01',0.00100],['2024-12-01',0.00350],['2025-01-01',0.03280],['2025-01-20',0.01500],['2025-02-10',0.02000],['2025-03-01',0.00900],['2025-03-24',0.00280],['2025-04-10',0.00100],['2025-04-17',0.000002],['2025-05-01',0.00060],['2025-06-01',0.00090],['2025-08-01',0.00105],['2025-10-01',0.00110],['2026-02-01',0.00114]
+      ['2023-05-13',0.00005],['2023-06-15',0.00007],['2023-07-20',0.00010],['2023-08-01',0.00012],['2023-09-10',0.00016],['2023-10-01',0.00020],['2023-11-10',0.00031],['2023-12-15',0.00045],
+      ['2024-01-20',0.00082],['2024-02-15',0.00120],['2024-03-10',0.00220],['2024-04-01',0.00320],['2024-04-20',0.00560],['2024-05-01',0.00780],['2024-05-20',0.00610],['2024-06-01',0.00500],
+      ['2024-06-20',0.00390],['2024-07-01',0.00300],['2024-07-25',0.00190],['2024-08-15',0.00120],['2024-09-10',0.00108],['2024-10-01',0.00100],['2024-11-05',0.00160],['2024-12-01',0.00350],
+      ['2025-01-01',0.03280],['2025-01-08',0.02800],['2025-01-20',0.01500],['2025-02-02',0.02400],['2025-02-10',0.02000],['2025-02-24',0.01300],['2025-03-01',0.00900],['2025-03-15',0.00450],['2025-03-24',0.00280],
+      ['2025-04-10',0.00100],['2025-04-17',0.000002],['2025-04-20',0.00018],['2025-05-01',0.00060],['2025-05-20',0.00075],['2025-06-01',0.00090],['2025-07-01',0.00100],['2025-08-01',0.00105],['2025-09-01',0.00108],['2025-10-01',0.00110],['2025-12-01',0.00112],['2026-02-01',0.00114]
     ].map(([date,price])=>({ts:toTs(date),price}));
 
     function buildDenseSeries(points, stepDays = 3) {
@@ -153,7 +178,7 @@
       return out;
     }
 
-    const pdaiSeries = buildDenseSeries(pdaiAnchors, 2);
+    const pdaiSeries = buildDenseSeries(pdaiAnchors, 1);
     const pdaiEvents = [['2023-05-13','44.37B pDAI airdropped to ETH holders'],['2025-01-26','PSM exploit period begins'],['2025-03-15','Peak exploit window near $0.034'],['2025-04-17','ESM shutdown crash wick lows'],['2026-02-01','Current zone around $0.00114']].map(([d,t])=>{const ts=toTs(d);const n=pdaiSeries.reduce((a,b)=>Math.abs(b.ts-ts)<Math.abs(a.ts-ts)?b:a,pdaiSeries[0]);return{ts:n.ts,price:n.price,title:t};});
 
     const assets = {
@@ -181,6 +206,7 @@
     let singleChart;
     let singleSeries;
     let singleResizeObs;
+    const singleState = { range: "ALL" };
 
     function toLightweightData(series) {
       return series.map((p) => ({ time: Math.floor(p.ts / 1000), value: p.price }));
@@ -189,11 +215,36 @@
     function buildSingleMarkers() {
       return pdaiEvents.map((e) => ({
         time: Math.floor(e.ts / 1000),
-        position: 'inBar',
+        position: 'aboveBar',
         color: '#7ce4ff',
         shape: 'circle',
         text: e.title,
       }));
+    }
+
+
+    function setSingleStats() {
+      const min = pdaiSeries.reduce((a,b)=>b.price<a.price?b:a,pdaiSeries[0]);
+      const max = pdaiSeries.reduce((a,b)=>b.price>a.price?b:a,pdaiSeries[0]);
+      const first = pdaiSeries[0];
+      const last = pdaiSeries[pdaiSeries.length-1];
+      const change = ((last.price / Math.max(first.price, 1e-12)) - 1) * 100;
+      document.getElementById('stat-current').textContent = fmtUsd(last.price);
+      document.getElementById('stat-ath').textContent = `${fmtUsd(max.price)} (${fmtDate(max.ts)})`;
+      document.getElementById('stat-atl').textContent = `${fmtUsd(min.price)} (${fmtDate(min.ts)})`;
+      document.getElementById('stat-change').textContent = `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
+      document.getElementById('stat-change').style.color = change >= 0 ? '#7cf8c0' : '#ff9ab8';
+    }
+
+    function applySingleRange() {
+      if (!singleChart) return;
+      const end = Math.floor(pdaiSeries[pdaiSeries.length - 1].ts / 1000);
+      const day = 60 * 60 * 24;
+      const map = { '6M': 183 * day, '1Y': 365 * day, '2Y': 730 * day, 'ALL': null };
+      const span = map[singleState.range];
+      if (!span) { singleChart.timeScale().fitContent(); return; }
+      const from = Math.max(Math.floor(pdaiSeries[0].ts / 1000), end - span);
+      singleChart.timeScale().setVisibleRange({ from, to: end });
     }
 
     function initSingleChart() {
@@ -205,7 +256,7 @@
         autoSize: true,
         layout: { background: { color: 'transparent' }, textColor: 'rgba(175, 206, 242, .88)' },
         grid: { vertLines: { color: 'rgba(130, 170, 230, 0.16)' }, horzLines: { color: 'rgba(130, 170, 230, 0.16)' } },
-        rightPriceScale: { borderColor: 'rgba(130, 170, 230, 0.25)' },
+        rightPriceScale: { borderColor: 'rgba(130, 170, 230, 0.25)', mode: LightweightCharts.PriceScaleMode.Logarithmic },
         timeScale: { borderColor: 'rgba(130, 170, 230, 0.25)', timeVisible: true, secondsVisible: false },
         crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
         localization: { priceFormatter: (p) => fmtUsd(p) },
@@ -215,7 +266,8 @@
         lineColor: '#7cdfff',
         topColor: 'rgba(118,170,255,0.35)',
         bottomColor: 'rgba(118,170,255,0.03)',
-        lineWidth: 2,
+        lineWidth: 2.4,
+        lineType: LightweightCharts.LineType.Curved,
         priceLineVisible: true,
       });
 
@@ -236,6 +288,14 @@
 
       singleResizeObs = new ResizeObserver(() => singleChart.applyOptions({}));
       singleResizeObs.observe(el);
+
+      document.querySelectorAll('#single-range-controls .range-chip').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          singleState.range = btn.dataset.range;
+          document.querySelectorAll('#single-range-controls .range-chip').forEach((b) => b.classList.toggle('active', b === btn));
+          applySingleRange();
+        });
+      });
     }
 
     function drawSingleChart() {
@@ -243,6 +303,8 @@
       if (!singleSeries || !singleChart) return;
       singleSeries.setData(toLightweightData(pdaiSeries));
       singleSeries.setMarkers(buildSingleMarkers());
+      setSingleStats();
+      applySingleRange();
     }
 
     const multiState = { focus:'pdai', scaleFactor:1.4, minTs:Math.min(...Object.values(assets).flatMap(a=>a.series.map(p=>p.ts))), maxTs:Math.max(...Object.values(assets).flatMap(a=>a.series.map(p=>p.ts))), viewStart:null, viewEnd:null, dragging:false, lastX:0 };
