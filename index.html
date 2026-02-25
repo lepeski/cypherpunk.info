@@ -182,7 +182,113 @@
     }
 
     let pdaiSeries = buildDenseSeries(pdaiAnchors, 1);
-    const pdaiEvents = [['2023-05-13','44.37B pDAI airdropped to ETH holders'],['2025-01-26','PSM exploit period begins'],['2025-03-15','Peak exploit window near $0.034'],['2025-04-17','ESM shutdown crash wick lows'],['2026-02-01','Current zone around $0.00114']].map(([d,t])=>{const ts=toTs(d);const n=pdaiSeries.reduce((a,b)=>Math.abs(b.ts-ts)<Math.abs(a.ts-ts)?b:a,pdaiSeries[0]);return{ts:n.ts,price:n.price,title:t};});
+    const pdaiEventDefs = [['2023-05-13','44.37B pDAI airdropped to ETH holders'],['2025-01-26','PSM exploit period begins'],['2025-03-15','Peak exploit window near $0.034'],['2025-04-17','ESM shutdown crash wick lows'],['2026-02-01','Current zone around $0.00114']].map(([d,title])=>({ ts: toTs(d), title }));
+    const pdaiEvents = pdaiEventDefs.map((e) => ({ ...e, price: null }));
+
+    function normalizeSeriesPoints(points) {
+      return points
+        .filter((p) => Number.isFinite(p.ts) && Number.isFinite(p.price) && p.price > 0)
+        .sort((a, b) => a.ts - b.ts)
+        .filter((p, i, arr) => i === 0 || p.ts !== arr[i - 1].ts);
+    }
+
+    function getPriceAtTs(series, ts) {
+      if (!series.length) return null;
+      if (ts <= series[0].ts) return series[0].price;
+      if (ts >= series[series.length - 1].ts) return series[series.length - 1].price;
+      for (let i = 1; i < series.length; i += 1) {
+        const left = series[i - 1];
+        const right = series[i];
+        if (ts === right.ts) return right.price;
+        if (ts < right.ts) {
+          const t = (ts - left.ts) / Math.max(1, right.ts - left.ts);
+          return left.price * Math.pow(Math.max(1e-8, right.price / Math.max(1e-8, left.price)), t);
+        }
+      }
+      return series[series.length - 1].price;
+    }
+
+    function injectEventPoints(series, events) {
+      const out = [...series];
+      for (const e of events) {
+        if (out.some((p) => p.ts === e.ts)) continue;
+        const price = getPriceAtTs(out, e.ts);
+        if (Number.isFinite(price) && price > 0) out.push({ ts: e.ts, price, synthetic: true });
+      }
+      return normalizeSeriesPoints(out);
+    }
+
+    function syncPdaiEventsToSeries() {
+      pdaiSeries = injectEventPoints(normalizeSeriesPoints(pdaiSeries), pdaiEvents);
+      for (const e of pdaiEvents) e.price = getPriceAtTs(pdaiSeries, e.ts);
+    }
+
+    async function fetchPdaiHistoryFromCoinGecko() {
+      const url = 'https://api.coingecko.com/api/v3/coins/dai-on-pulsechain/market_chart?vs_currency=usd&days=max&interval=daily';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`CoinGecko HTTP ${res.status}`);
+      const data = await res.json();
+      const rows = data?.prices;
+      if (!Array.isArray(rows) || rows.length < 60) throw new Error('Insufficient CoinGecko history');
+      return normalizeSeriesPoints(rows.map((r) => ({ ts: Number(r?.[0]), price: Number(r?.[1]) })));
+    }
+
+    async function fetchPdaiHistoryFromGeckoTerminal() {
+      const url = 'https://api.geckoterminal.com/api/v2/networks/pulsechain/pools/0x25a72131d02081eef532192e7be1144e139e165e/ohlcv/day?aggregate=1&limit=1000';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`GeckoTerminal HTTP ${res.status}`);
+      const data = await res.json();
+      const rows = data?.data?.attributes?.ohlcv_list;
+      if (!Array.isArray(rows) || rows.length < 20) throw new Error('Insufficient OHLC history');
+      return normalizeSeriesPoints(rows.map((r) => ({ ts: Number(r?.[0]) * 1000, price: Number(r?.[4]) })));
+    }
+
+    function mergeWithModeledContext(primary, modeled) {
+      if (!primary.length) return normalizeSeriesPoints(modeled);
+      const start = primary[0].ts;
+      const end = primary[primary.length - 1].ts;
+      const prefix = modeled.filter((p) => p.ts < start);
+      const suffix = modeled.filter((p) => p.ts > end);
+      return normalizeSeriesPoints([...prefix, ...primary, ...suffix]);
+    }
+
+    async function hydratePdaiSeries() {
+      const sourceEl = document.getElementById('single-source');
+      const modeled = [...pdaiSeries];
+      try {
+        const cgSeries = await fetchPdaiHistoryFromCoinGecko();
+        pdaiSeries = mergeWithModeledContext(cgSeries, modeled);
+        syncPdaiEventsToSeries();
+        if (sourceEl) sourceEl.textContent = 'Source: CoinGecko daily prices (dai-on-pulsechain) + modeled context';
+        return;
+      } catch (err) {
+        try {
+          const geckoSeries = await fetchPdaiHistoryFromGeckoTerminal();
+          if (geckoSeries.length > 0) {
+            pdaiSeries = mergeWithModeledContext(geckoSeries, modeled);
+            syncPdaiEventsToSeries();
+            if (sourceEl) sourceEl.textContent = 'Source: GeckoTerminal OHLC (daily close) + modeled context';
+            return;
+          }
+        } catch (err2) {
+          console.warn('CoinGecko and GeckoTerminal history unavailable.', err, err2);
+        }
+        pdaiSeries = normalizeSeriesPoints(modeled);
+        syncPdaiEventsToSeries();
+        if (sourceEl) sourceEl.textContent = 'Source: modeled anchor series (fallback)';
+      }
+    }
+
+    syncPdaiEventsToSeries();
+
+    const assets = {
+      pdai: { name:'pDAI', color:'#67d9ff', ghost:'#67d9ff40', series: pdaiSeries, events: pdaiEvents },
+      btc: { name:'BTC', color:'#f9c35a', ghost:'#f9c35a40', series:[['2013-01-01',13],['2017-12-17',19783],['2018-12-15',3122],['2021-11-10',68789],['2022-11-10',15500],['2024-03-14',73750]].map(([d,p])=>({ts:toTs(d),price:p})), events:[['2017-12-17','Cycle ATH'],['2021-11-10','ATH'],['2024-03-14','Pre-halving ATH']] },
+      eth: { name:'ETH', color:'#c8ceda', ghost:'#c8ceda40', series:[['2015-07-30',0.31],['2018-01-13',1432],['2018-12-15',80],['2021-11-10',4891],['2022-09-15',1450],['2024-01-01',3500]].map(([d,p])=>({ts:toTs(d),price:p})), events:[['2015-07-30','Ethereum mainnet launches'],['2021-11-10','ETH ATH'],['2022-09-15','The Merge']] },
+      pls: { name:'PLS', color:'#7f8bff', ghost:'#7f8bff40', series:[['2023-05-13',0.000086],['2023-12-01',0.00006],['2024-12-01',0.00007],['2025-06-01',0.00003]].map(([d,p])=>({ts:toTs(d),price:p})), events:[['2023-05-13','PulseChain mainnet launches'],['2025-06-01','Current low-range state']] }
+    };
+
+    for (const key of Object.keys(assets)) if (key !== 'pdai') assets[key].events = assets[key].events.map(([d,t])=>{const ts=toTs(d); const n=assets[key].series.reduce((a,b)=>Math.abs(b.ts-ts)<Math.abs(a.ts-ts)?b:a,assets[key].series[0]); return {ts:n.ts,price:n.price,title:t};});
 
     async function fetchPdaiHistoryFromGecko() {
       const url = 'https://api.geckoterminal.com/api/v2/networks/pulsechain/pools/0x25a72131d02081eef532192e7be1144e139e165e/ohlcv/day?aggregate=1&limit=1000';
@@ -257,7 +363,7 @@
         position: 'aboveBar',
         color: '#7ce4ff',
         shape: 'circle',
-        text: e.title,
+        text: `${new Date(e.ts).toLocaleDateString(undefined, { month:'short', year:'2-digit' })} · ${e.title}`,
       }));
     }
 
