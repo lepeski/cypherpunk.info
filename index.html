@@ -15,6 +15,7 @@
     .subtitle { color:#a8c3e6; font-size:.83rem; }
     .chart-shell { position: relative; border-radius: 14px; border: 1px solid rgba(143, 200, 255, .2); background: radial-gradient(1200px 320px at 20% 0%, rgba(83, 105, 255, .15), transparent 60%), radial-gradient(920px 300px at 90% 100%, rgba(84, 229, 255, .12), transparent 70%), rgba(3, 12, 29, .62); overflow: hidden; padding: .55rem; }
     svg { width:100%; height:min(67vh,620px); min-height:390px; display:block; }
+    #single-chart { width:100%; height:min(67vh,620px); min-height:390px; display:block; }
     #multi-chart { height:min(66vh,600px); min-height:360px; }
     .grid-line { stroke: rgba(130, 170, 230, 0.16); stroke-width: 1; }
     .axis-label { fill: rgba(175, 206, 242, .88); font-size: 11px; }
@@ -34,7 +35,15 @@
     .tooltip.visible { opacity:1; transform: scale(1); }
     .tooltip-date { color:#8fb4ff; font-size:.72rem; margin-bottom:.14rem; }
     .tooltip-price { color:#7ce4ff; font-size:.72rem; margin-bottom:.2rem; }
-    @media (max-width: 760px) { .window { padding: .65rem; } .chart-shell { padding: .3rem; } svg, #multi-chart { height: 64vh; min-height: 340px; } }
+    .single-toolbar { display:flex; justify-content:space-between; gap:.6rem; flex-wrap:wrap; padding:.1rem .15rem .5rem; align-items:center; }
+    .single-stats { display:flex; gap:.7rem; flex-wrap:wrap; }
+    .single-stat { border:1px solid rgba(134,201,255,.24); background:rgba(8,18,40,.42); border-radius:10px; padding:.26rem .5rem; font-size:.72rem; color:#a9cbeb; }
+    .single-stat b { color:#dff5ff; font-weight:600; margin-left:.25rem; }
+    .single-source { font-size:.7rem; color:#8fb4c8; padding:.15rem .2rem .35rem; }
+    .range-controls { display:flex; gap:.35rem; }
+    .range-chip { border:1px solid rgba(144,193,255,.24); background:rgba(9,22,45,.66); color:#c9e7ff; border-radius:999px; padding:.2rem .5rem; font-size:.72rem; cursor:pointer; }
+    .range-chip.active { border-color: rgba(116, 227, 255, .75); box-shadow: 0 0 12px rgba(92, 206, 255, .22) inset; }
+    @media (max-width: 760px) { .window { padding: .65rem; } .chart-shell { padding: .3rem; } svg, #single-chart, #multi-chart { height: 64vh; min-height: 340px; } }
   </style>
 </head>
 <body>
@@ -46,7 +55,22 @@
         <p class="subtitle">Tooltip-only events • clean quarterly x-axis</p>
       </div>
       <section class="chart-shell">
-        <svg id="single-chart" viewBox="0 0 1400 740" preserveAspectRatio="xMidYMid meet"></svg>
+        <div class="single-toolbar">
+          <div class="single-stats">
+            <span class="single-stat">Current <b id="stat-current">-</b></span>
+            <span class="single-stat">ATH <b id="stat-ath">-</b></span>
+            <span class="single-stat">ATL <b id="stat-atl">-</b></span>
+            <span class="single-stat">Change <b id="stat-change">-</b></span>
+          </div>
+          <div class="range-controls" id="single-range-controls">
+            <button class="range-chip" data-range="6M">6M</button>
+            <button class="range-chip" data-range="1Y">1Y</button>
+            <button class="range-chip" data-range="2Y">2Y</button>
+            <button class="range-chip active" data-range="ALL">ALL</button>
+          </div>
+        </div>
+        <div class="single-source" id="single-source">Source: modeled anchor series (fallback)</div>
+        <div id="single-chart" aria-label="pDAI chart"></div>
         <div id="single-tooltip" class="tooltip" role="tooltip" aria-hidden="true"></div>
       </section>
     </section>
@@ -72,6 +96,7 @@
   </main>
 
   <script src="https://pixijs.download/v6.5.8/pixi.min.js"></script>
+  <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
   <script>
     const app = new PIXI.Application({ autoDensity:true, antialias:true, backgroundAlpha:0, width:window.innerWidth, height:window.innerHeight, resolution:window.devicePixelRatio||1 });
     document.getElementById('canvas-container').appendChild(app.view);
@@ -106,7 +131,14 @@
 
     const toTs = (d) => new Date(d).getTime();
     const fmtDate = (ts) => new Date(ts).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
-    const fmtUsd = (v) => { if (v >= 1000) return `$${v.toLocaleString(undefined,{maximumFractionDigits:0})}`; if (v >= 1) return `$${v.toLocaleString(undefined,{maximumFractionDigits:2})}`; if (v >= 0.01) return `$${v.toFixed(4)}`; if (v >= 0.0001) return `$${v.toFixed(6)}`; return `$${v.toExponential(2)}`; };
+    const fmtUsd = (value) => {
+      const v = Number(value) || 0;
+      if (v >= 1000) return `$${v.toLocaleString(undefined,{maximumFractionDigits:0})}`;
+      if (v >= 1) return `$${v.toLocaleString(undefined,{maximumFractionDigits:2})}`;
+      if (v === 0) return '$0';
+      const decimals = Math.min(12, Math.max(4, Math.ceil(Math.abs(Math.log10(v))) + 2));
+      return `$${v.toFixed(decimals).replace(/\.?0+$/, '')}`;
+    };
     const timelineTicks = (minTs, maxTs) => {
       const quarters = [];
       const years = [];
@@ -123,10 +155,140 @@
       return { quarters, years };
     };
 
-    const pdaiSeries = [
-      ['2023-05-13',0.00005],['2023-08-01',0.00012],['2023-10-01',0.00020],['2023-12-15',0.00045],['2024-02-15',0.00120],['2024-04-01',0.00320],['2024-05-01',0.00780],['2024-06-01',0.00500],['2024-07-01',0.00300],['2024-08-15',0.00120],['2024-10-01',0.00100],['2024-12-01',0.00350],['2025-01-01',0.03280],['2025-01-20',0.01500],['2025-02-10',0.02000],['2025-03-01',0.00900],['2025-03-24',0.00280],['2025-04-10',0.00100],['2025-04-17',0.000002],['2025-05-01',0.00060],['2025-06-01',0.00090],['2025-08-01',0.00105],['2025-10-01',0.00110],['2026-02-01',0.00114]
+    const pdaiAnchors = [
+      ['2023-05-13',0.00005],['2023-06-15',0.00007],['2023-07-20',0.00010],['2023-08-01',0.00012],['2023-09-10',0.00016],['2023-10-01',0.00020],['2023-11-10',0.00031],['2023-12-15',0.00045],
+      ['2024-01-20',0.00082],['2024-02-15',0.00120],['2024-03-10',0.00220],['2024-04-01',0.00320],['2024-04-20',0.00560],['2024-05-01',0.00780],['2024-05-20',0.00610],['2024-06-01',0.00500],
+      ['2024-06-20',0.00390],['2024-07-01',0.00300],['2024-07-25',0.00190],['2024-08-15',0.00120],['2024-09-10',0.00108],['2024-10-01',0.00100],['2024-11-05',0.00160],['2024-12-01',0.00350],
+      ['2025-01-01',0.03280],['2025-01-08',0.02800],['2025-01-20',0.01500],['2025-02-02',0.02400],['2025-02-10',0.02000],['2025-02-24',0.01300],['2025-03-01',0.00900],['2025-03-15',0.00450],['2025-03-24',0.00280],
+      ['2025-04-10',0.00100],['2025-04-17',0.000002],['2025-04-20',0.00018],['2025-05-01',0.00060],['2025-05-20',0.00075],['2025-06-01',0.00090],['2025-07-01',0.00100],['2025-08-01',0.00105],['2025-09-01',0.00108],['2025-10-01',0.00110],['2025-12-01',0.00112],['2026-02-01',0.00114]
     ].map(([date,price])=>({ts:toTs(date),price}));
-    const pdaiEvents = [['2023-05-13','44.37B pDAI airdropped to ETH holders'],['2025-01-26','PSM exploit period begins'],['2025-03-15','Peak exploit window near $0.034'],['2025-04-17','ESM shutdown crash wick lows'],['2026-02-01','Current zone around $0.00114']].map(([d,t])=>{const ts=toTs(d);const n=pdaiSeries.reduce((a,b)=>Math.abs(b.ts-ts)<Math.abs(a.ts-ts)?b:a,pdaiSeries[0]);return{ts:n.ts,price:n.price,title:t};});
+
+    function buildDenseSeries(points, stepDays = 3) {
+      const out = [];
+      const step = 1000 * 60 * 60 * 24 * stepDays;
+      for (let i = 0; i < points.length - 1; i += 1) {
+        const a = points[i], b = points[i + 1];
+        const span = Math.max(step, b.ts - a.ts);
+        const steps = Math.max(1, Math.floor(span / step));
+        for (let j = 0; j < steps; j += 1) {
+          const t = j / steps;
+          const ts = a.ts + (b.ts - a.ts) * t;
+          const price = a.price * Math.pow(Math.max(1e-8, b.price / Math.max(1e-8, a.price)), t);
+          out.push({ ts, price });
+        }
+      }
+      out.push(points[points.length - 1]);
+      return out;
+    }
+
+    let pdaiSeries = buildDenseSeries(pdaiAnchors, 1);
+    const pdaiEventDefs = [['2023-05-13','44.37B pDAI airdropped to ETH holders'],['2025-01-26','PSM exploit period begins'],['2025-03-15','Peak exploit window near $0.034'],['2025-04-17','ESM shutdown crash wick lows'],['2026-02-01','Current zone around $0.00114']].map(([d,title])=>({ ts: toTs(d), title }));
+    const pdaiEvents = pdaiEventDefs.map((e) => ({ ...e, price: null }));
+
+    function normalizeSeriesPoints(points) {
+      return points
+        .filter((p) => Number.isFinite(p.ts) && Number.isFinite(p.price) && p.price > 0)
+        .sort((a, b) => a.ts - b.ts)
+        .filter((p, i, arr) => i === 0 || p.ts !== arr[i - 1].ts);
+    }
+
+    function getPriceAtTs(series, ts) {
+      if (!series.length) return null;
+      if (ts <= series[0].ts) return series[0].price;
+      if (ts >= series[series.length - 1].ts) return series[series.length - 1].price;
+      for (let i = 1; i < series.length; i += 1) {
+        const left = series[i - 1];
+        const right = series[i];
+        if (ts === right.ts) return right.price;
+        if (ts < right.ts) {
+          const t = (ts - left.ts) / Math.max(1, right.ts - left.ts);
+          return left.price * Math.pow(Math.max(1e-8, right.price / Math.max(1e-8, left.price)), t);
+        }
+      }
+      return series[series.length - 1].price;
+    }
+
+    function injectEventPoints(series, events) {
+      const out = [...series];
+      for (const e of events) {
+        if (out.some((p) => p.ts === e.ts)) continue;
+        const price = getPriceAtTs(out, e.ts);
+        if (Number.isFinite(price) && price > 0) out.push({ ts: e.ts, price, synthetic: true });
+      }
+      return normalizeSeriesPoints(out);
+    }
+
+    function syncPdaiEventsToSeries() {
+      pdaiSeries = injectEventPoints(normalizeSeriesPoints(pdaiSeries), pdaiEvents);
+      for (const e of pdaiEvents) e.price = getPriceAtTs(pdaiSeries, e.ts);
+    }
+
+    async function fetchPdaiHistoryFromCoinGecko() {
+      const url = 'https://api.coingecko.com/api/v3/coins/dai-on-pulsechain/market_chart?vs_currency=usd&days=max&interval=daily';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`CoinGecko HTTP ${res.status}`);
+      const data = await res.json();
+      const rows = data?.prices;
+      if (!Array.isArray(rows) || rows.length < 60) throw new Error('Insufficient CoinGecko history');
+      return normalizeSeriesPoints(rows.map((r) => ({ ts: Number(r?.[0]), price: Number(r?.[1]) })));
+    }
+
+    async function fetchPdaiHistoryFromGeckoTerminal() {
+      const url = 'https://api.geckoterminal.com/api/v2/networks/pulsechain/pools/0x25a72131d02081eef532192e7be1144e139e165e/ohlcv/day?aggregate=1&limit=1000';
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`GeckoTerminal HTTP ${res.status}`);
+      const data = await res.json();
+      const rows = data?.data?.attributes?.ohlcv_list;
+      if (!Array.isArray(rows) || rows.length < 20) throw new Error('Insufficient OHLC history');
+      return normalizeSeriesPoints(rows.map((r) => ({ ts: Number(r?.[0]) * 1000, price: Number(r?.[4]) })));
+    }
+
+    function mergeWithModeledContext(primary, modeled) {
+      if (!primary.length) return normalizeSeriesPoints(modeled);
+      const start = primary[0].ts;
+      const end = primary[primary.length - 1].ts;
+      const prefix = modeled.filter((p) => p.ts < start);
+      const suffix = modeled.filter((p) => p.ts > end);
+      return normalizeSeriesPoints([...prefix, ...primary, ...suffix]);
+    }
+
+    async function hydratePdaiSeries() {
+      const sourceEl = document.getElementById('single-source');
+      const modeled = [...pdaiSeries];
+      try {
+        const cgSeries = await fetchPdaiHistoryFromCoinGecko();
+        pdaiSeries = mergeWithModeledContext(cgSeries, modeled);
+        syncPdaiEventsToSeries();
+        if (sourceEl) sourceEl.textContent = 'Source: CoinGecko daily prices (dai-on-pulsechain) + modeled context';
+        return;
+      } catch (err) {
+        try {
+          const geckoSeries = await fetchPdaiHistoryFromGeckoTerminal();
+          if (geckoSeries.length > 0) {
+            pdaiSeries = mergeWithModeledContext(geckoSeries, modeled);
+            syncPdaiEventsToSeries();
+            if (sourceEl) sourceEl.textContent = 'Source: GeckoTerminal OHLC (daily close) + modeled context';
+            return;
+          }
+        } catch (err2) {
+          console.warn('CoinGecko and GeckoTerminal history unavailable.', err, err2);
+        }
+        pdaiSeries = normalizeSeriesPoints(modeled);
+        syncPdaiEventsToSeries();
+        if (sourceEl) sourceEl.textContent = 'Source: modeled anchor series (fallback)';
+      }
+    }
+
+    syncPdaiEventsToSeries();
+
+    const assets = {
+      pdai: { name:'pDAI', color:'#67d9ff', ghost:'#67d9ff40', series: pdaiSeries, events: pdaiEvents },
+      btc: { name:'BTC', color:'#f9c35a', ghost:'#f9c35a40', series:[['2013-01-01',13],['2017-12-17',19783],['2018-12-15',3122],['2021-11-10',68789],['2022-11-10',15500],['2024-03-14',73750]].map(([d,p])=>({ts:toTs(d),price:p})), events:[['2017-12-17','Cycle ATH'],['2021-11-10','ATH'],['2024-03-14','Pre-halving ATH']] },
+      eth: { name:'ETH', color:'#c8ceda', ghost:'#c8ceda40', series:[['2015-07-30',0.31],['2018-01-13',1432],['2018-12-15',80],['2021-11-10',4891],['2022-09-15',1450],['2024-01-01',3500]].map(([d,p])=>({ts:toTs(d),price:p})), events:[['2015-07-30','Ethereum mainnet launches'],['2021-11-10','ETH ATH'],['2022-09-15','The Merge']] },
+      pls: { name:'PLS', color:'#7f8bff', ghost:'#7f8bff40', series:[['2023-05-13',0.000086],['2023-12-01',0.00006],['2024-12-01',0.00007],['2025-06-01',0.00003]].map(([d,p])=>({ts:toTs(d),price:p})), events:[['2023-05-13','PulseChain mainnet launches'],['2025-06-01','Current low-range state']] }
+    };
+
+    for (const key of Object.keys(assets)) if (key !== 'pdai') assets[key].events = assets[key].events.map(([d,t])=>{const ts=toTs(d); const n=assets[key].series.reduce((a,b)=>Math.abs(b.ts-ts)<Math.abs(a.ts-ts)?b:a,assets[key].series[0]); return {ts:n.ts,price:n.price,title:t};});
 
     function placeTooltip(tip, ev, container) {
       const r = container.getBoundingClientRect();
@@ -141,33 +303,112 @@
       tip.style.top = `${y}px`;
     }
 
-    function drawSingleChart() {
-      const svg = document.getElementById('single-chart'); const tip = document.getElementById('single-tooltip'); const W = 1400, H = 740;
-      const pad = { top: 24, right: 62, bottom: 64, left: 68 }, innerW = W - pad.left - pad.right, innerH = H - pad.top - pad.bottom;
-      const minTs = pdaiSeries[0].ts, maxTs = pdaiSeries[pdaiSeries.length-1].ts, minP = 0, maxP = 0.035;
-      const x = (ts)=>pad.left+((ts-minTs)/(maxTs-minTs))*innerW, y=(p)=>pad.top+(1-((p-minP)/(maxP-minP)))*innerH;
-      const path = pdaiSeries.map((p,i)=>`${i?'L':'M'} ${x(p.ts).toFixed(2)} ${y(p.price).toFixed(2)}`).join(' ');
-      const areaPath = `${path} L ${x(maxTs).toFixed(2)} ${H-pad.bottom} L ${x(minTs).toFixed(2)} ${H-pad.bottom} Z`;
-      svg.innerHTML = `<defs><linearGradient id="lineGradient" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#66e0ff"/><stop offset="45%" stop-color="#8f8bff"/><stop offset="100%" stop-color="#d36cff"/></linearGradient><linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(118,170,255,0.35)"/><stop offset="100%" stop-color="rgba(118,170,255,0.03)"/></linearGradient><clipPath id="plotClip1"><rect x="${pad.left}" y="${pad.top}" width="${innerW}" height="${innerH}"/></clipPath></defs>
-      ${[0,0.005,0.01,0.015,0.02,0.025,0.03,0.035].map(v=>`<line class="grid-line" x1="${pad.left}" y1="${y(v)}" x2="${W-pad.right}" y2="${y(v)}"/><text class="axis-label" x="${W-pad.right+10}" y="${y(v)+4}">${fmtUsd(v)}</text>`).join('')}
-      ${timelineTicks(minTs,maxTs).quarters.map(t=>`<line class=\"grid-line\" style=\"opacity:.45\" x1=\"${x(t.ts)}\" y1=\"${pad.top}\" x2=\"${x(t.ts)}\" y2=\"${H-pad.bottom}\"/>`).join('')}${timelineTicks(minTs,maxTs).years.map(t=>`<line class=\"grid-line\" style=\"opacity:.9\" x1=\"${x(t.ts)}\" y1=\"${pad.top}\" x2=\"${x(t.ts)}\" y2=\"${H-pad.bottom}\"/><text class=\"axis-label\" x=\"${x(t.ts)-14}\" y=\"${H-20}\">${t.label}</text>`).join('')}
-      <text class="axis-title" x="${W-pad.right+8}" y="14">pDAI USD</text><g clip-path="url(#plotClip1)"><path class="price-area" d="${areaPath}"/><path class="price-path" d="${path}"/>${pdaiEvents.map(e=>`<circle class="event-dot" cx="${x(e.ts)}" cy="${y(e.price)}" r="5.2" data-date="${fmtDate(e.ts)}" data-price="${fmtUsd(e.price)}" data-title="${e.title}"/>`).join('')}</g>`;
-      const hide=()=>{tip.classList.remove('visible');tip.setAttribute('aria-hidden','true');};
-      svg.querySelectorAll('.event-dot').forEach(dot=>{dot.addEventListener('mouseenter',(ev)=>{const t=ev.currentTarget;tip.innerHTML=`<div class="tooltip-date">${t.dataset.date}</div><div class="tooltip-price">${t.dataset.price}</div><div>${t.dataset.title}</div>`;tip.classList.add('visible');dot.setAttribute('r','7');});dot.addEventListener('mousemove',(ev)=>{placeTooltip(tip, ev, svg.parentElement);});dot.addEventListener('mouseleave',()=>{dot.setAttribute('r','5.2');hide();});});
-      svg.addEventListener('mouseleave', hide);
+    let singleChart;
+    let singleSeries;
+    let singleResizeObs;
+    const singleState = { range: "ALL" };
+
+    function toLightweightData(series) {
+      return series.map((p) => ({ time: Math.floor(p.ts / 1000), value: p.price }));
     }
 
-    const assets = {
-      pdai: { name:'pDAI', color:'#67d9ff', ghost:'#67d9ff40', series: pdaiSeries, events: pdaiEvents },
-      btc: { name:'BTC', color:'#f9c35a', ghost:'#f9c35a40', series:[['2009-01-03',0],['2011-06-01',32],['2015-01-01',175],['2017-12-17',19783],['2018-12-15',3122],['2021-11-10',68789],['2022-11-10',15500],['2024-03-14',73750],['2025-01-01',100000],['2026-02-01',96000]].map(([d,p])=>({ts:toTs(d),price:p})), events:[['2009-01-03','Genesis Block mined'],['2017-12-17','Cycle ATH'],['2021-11-10','ATH'],['2024-03-14','Pre-halving ATH']] },
-      eth: { name:'ETH', color:'#c8ceda', ghost:'#c8ceda40', series:[['2015-07-30',0.31],['2018-01-13',1432],['2018-12-15',80],['2021-11-10',4891],['2022-09-15',1450],['2024-01-01',3500],['2026-02-01',2700]].map(([d,p])=>({ts:toTs(d),price:p})), events:[['2015-07-30','Ethereum mainnet launches'],['2021-11-10','ETH ATH'],['2022-09-15','The Merge']] },
-      hex: { name:'HEX', color:'#ff64d9', ghost:'#ff64d940', series:[['2019-12-02',0.00002],['2020-08-01',0.006],['2021-09-19',0.55],['2022-11-01',0.005],['2024-01-01',0.008],['2026-02-01',0.008]].map(([d,p])=>({ts:toTs(d),price:p})), events:[['2019-12-02','HEX launches'],['2021-09-19','HEX ATH']] },
-      pls: { name:'PLS', color:'#7f8bff', ghost:'#7f8bff40', series:[['2023-05-13',0.000086],['2023-12-01',0.00006],['2024-12-01',0.00007],['2025-06-01',0.00003],['2026-02-01',0.000017]].map(([d,p])=>({ts:toTs(d),price:p})), events:[['2023-05-13','PulseChain mainnet launches'],['2026-02-01','Current low-range state']] }
-    };
-    for (const key of Object.keys(assets)) if (key !== 'pdai') assets[key].events = assets[key].events.map(([d,t])=>{const ts=toTs(d); const n=assets[key].series.reduce((a,b)=>Math.abs(b.ts-ts)<Math.abs(a.ts-ts)?b:a,assets[key].series[0]); return {ts:n.ts,price:n.price,title:t};});
+    function buildSingleMarkers() {
+      return pdaiEvents.map((e) => ({
+        time: Math.floor(e.ts / 1000),
+        position: 'aboveBar',
+        color: '#7ce4ff',
+        shape: 'circle',
+        text: `${new Date(e.ts).toLocaleDateString(undefined, { month:'short', year:'2-digit' })} · ${e.title}`,
+      }));
+    }
+
+
+    function setSingleStats() {
+      const min = pdaiSeries.reduce((a,b)=>b.price<a.price?b:a,pdaiSeries[0]);
+      const max = pdaiSeries.reduce((a,b)=>b.price>a.price?b:a,pdaiSeries[0]);
+      const first = pdaiSeries[0];
+      const last = pdaiSeries[pdaiSeries.length-1];
+      const change = ((last.price / Math.max(first.price, 1e-12)) - 1) * 100;
+      document.getElementById('stat-current').textContent = fmtUsd(last.price);
+      document.getElementById('stat-ath').textContent = `${fmtUsd(max.price)} (${fmtDate(max.ts)})`;
+      document.getElementById('stat-atl').textContent = `${fmtUsd(min.price)} (${fmtDate(min.ts)})`;
+      document.getElementById('stat-change').textContent = `${change >= 0 ? '+' : ''}${change.toFixed(1)}%`;
+      document.getElementById('stat-change').style.color = change >= 0 ? '#7cf8c0' : '#ff9ab8';
+    }
+
+    function applySingleRange() {
+      if (!singleChart) return;
+      const end = Math.floor(pdaiSeries[pdaiSeries.length - 1].ts / 1000);
+      const day = 60 * 60 * 24;
+      const map = { '6M': 183 * day, '1Y': 365 * day, '2Y': 730 * day, 'ALL': null };
+      const span = map[singleState.range];
+      if (!span) { singleChart.timeScale().fitContent(); return; }
+      const from = Math.max(Math.floor(pdaiSeries[0].ts / 1000), end - span);
+      singleChart.timeScale().setVisibleRange({ from, to: end });
+    }
+
+    function initSingleChart() {
+      const el = document.getElementById('single-chart');
+      const tip = document.getElementById('single-tooltip');
+      if (!el || singleChart) return;
+
+      singleChart = LightweightCharts.createChart(el, {
+        autoSize: true,
+        layout: { background: { color: 'transparent' }, textColor: 'rgba(175, 206, 242, .88)' },
+        grid: { vertLines: { color: 'rgba(130, 170, 230, 0.16)' }, horzLines: { color: 'rgba(130, 170, 230, 0.16)' } },
+        rightPriceScale: { borderColor: 'rgba(130, 170, 230, 0.25)', mode: LightweightCharts.PriceScaleMode.Logarithmic },
+        timeScale: { borderColor: 'rgba(130, 170, 230, 0.25)', timeVisible: true, secondsVisible: false },
+        crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+        localization: { priceFormatter: (p) => fmtUsd(p) },
+      });
+
+      singleSeries = singleChart.addAreaSeries({
+        lineColor: '#7cdfff',
+        topColor: 'rgba(118,170,255,0.35)',
+        bottomColor: 'rgba(118,170,255,0.03)',
+        lineWidth: 2.4,
+        lineType: LightweightCharts.LineType.Curved,
+        priceLineVisible: true,
+      });
+
+      singleSeries.setData(toLightweightData(pdaiSeries));
+      singleSeries.setMarkers(buildSingleMarkers());
+      singleChart.timeScale().fitContent();
+
+      singleChart.subscribeCrosshairMove((param) => {
+        if (!param?.point || !param?.time) { tip.classList.remove('visible'); tip.setAttribute('aria-hidden','true'); return; }
+        const price = param.seriesData.get(singleSeries)?.value;
+        if (!Number.isFinite(price)) { tip.classList.remove('visible'); tip.setAttribute('aria-hidden','true'); return; }
+        const ts = Number(param.time) * 1000;
+        tip.innerHTML = `<div class="tooltip-date">${fmtDate(ts)}</div><div class="tooltip-price">${fmtUsd(price)}</div>`;
+        tip.classList.add('visible');
+        tip.setAttribute('aria-hidden','false');
+        placeTooltip(tip, { clientX: param.point.x + el.getBoundingClientRect().left, clientY: param.point.y + el.getBoundingClientRect().top }, el.parentElement);
+      });
+
+      singleResizeObs = new ResizeObserver(() => singleChart.applyOptions({}));
+      singleResizeObs.observe(el);
+
+      document.querySelectorAll('#single-range-controls .range-chip').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          singleState.range = btn.dataset.range;
+          document.querySelectorAll('#single-range-controls .range-chip').forEach((b) => b.classList.toggle('active', b === btn));
+          applySingleRange();
+        });
+      });
+    }
+
+    function drawSingleChart() {
+      initSingleChart();
+      if (!singleSeries || !singleChart) return;
+      singleSeries.setData(toLightweightData(pdaiSeries));
+      singleSeries.setMarkers(buildSingleMarkers());
+      setSingleStats();
+      applySingleRange();
+    }
 
     const multiState = { focus:'pdai', scaleFactor:1.4, minTs:Math.min(...Object.values(assets).flatMap(a=>a.series.map(p=>p.ts))), maxTs:Math.max(...Object.values(assets).flatMap(a=>a.series.map(p=>p.ts))), viewStart:null, viewEnd:null, dragging:false, lastX:0 };
-    multiState.viewStart = multiState.minTs; multiState.viewEnd = multiState.maxTs;
+    multiState.viewEnd = multiState.maxTs; multiState.viewStart = Math.max(multiState.minTs, multiState.maxTs - 1000*60*60*24*365*2.5);
 
     function drawMultiChart() {
       const svg = document.getElementById('multi-chart'); const tip = document.getElementById('multi-tooltip'); const legend = document.getElementById('multi-legend');
@@ -177,10 +418,9 @@
       const ticks = timelineTicks(viewStart, viewEnd);
 
       const yUnified = (normValue) => {
-        const raw = (Math.log10(Math.max(1e-6, normValue)) + 2) / 4;
+        const raw = (Math.log10(Math.max(1e-8, normValue)) + 2) / 4;
         const scaled = ((raw - 0.5) / multiState.scaleFactor) + 0.5;
-        const clamped = Math.max(0, Math.min(1, scaled));
-        return pad.top + (1 - clamped) * innerH;
+        return pad.top + (1 - Math.max(0, Math.min(1, scaled))) * innerH;
       };
 
       const yTickValues = [0.25,0.5,1,2,4,8,16];
@@ -189,20 +429,19 @@
       for (const [k,a] of Object.entries(assets)) {
         const vis=a.series.filter(p=>p.ts>=viewStart&&p.ts<=viewEnd); if (vis.length<2) continue;
         const isFocus=k===focus;
-        const base = a.series.find(v=>v.price>0)?.price || 1;
-        const pts=vis.map(p=>`${x(p.ts).toFixed(2)} ${yUnified(p.price/base).toFixed(2)}`);
-        const d=pts.map((pt,i)=>`${i?'L':'M'} ${pt}`).join(' ');
+        const base = vis[0].price || a.series.find(v=>v.price>0)?.price || 1;
+        const d=vis.map((p,i)=>`${i?'L':'M'} ${x(p.ts).toFixed(2)} ${yUnified(p.price/base).toFixed(2)}`).join(' ');
         paths += `<path d="${d}" fill="none" stroke="${isFocus?a.color:a.ghost}" stroke-width="${isFocus?2.7:1.4}" opacity="${isFocus?1:0.72}" stroke-linecap="round" stroke-linejoin="round"/>`;
       }
 
       const dots = Object.entries(assets).flatMap(([k,a])=>a.events.filter(e=>e.ts>=viewStart&&e.ts<=viewEnd).map(e=>{
         const isFocus=k===focus;
-        const base = a.series.find(v=>v.price>0)?.price || 1;
+        const base = a.series.find(v=>v.ts>=viewStart)?.price || a.series.find(v=>v.price>0)?.price || 1;
         const cy=yUnified(e.price/base);
         return `<circle class="event-dot" cx="${x(e.ts)}" cy="${cy}" r="${isFocus?5.2:3.8}" style="fill:${isFocus?a.color:a.ghost};stroke:${isFocus?'#e8f6ff':'#7ca2d7'};opacity:${isFocus?1:0.8}" data-asset="${k}" data-date="${fmtDate(e.ts)}" data-price="${fmtUsd(e.price)}" data-title="${e.title}"/>`;
       })).join('');
 
-      svg.innerHTML = `<defs><clipPath id="plotClip2"><rect x="${pad.left}" y="${pad.top}" width="${innerW}" height="${innerH}"/></clipPath></defs>${yTickValues.map(v=>`<line class="grid-line" x1="${pad.left}" y1="${yUnified(v)}" x2="${W-pad.right}" y2="${yUnified(v)}"/><text class="axis-label" x="${W-pad.right+8}" y="${yUnified(v)+4}">${v}x</text>`).join('')}${ticks.quarters.map(t=>`<line class="grid-line" style="opacity:.45" x1="${x(t.ts)}" y1="${pad.top}" x2="${x(t.ts)}" y2="${H-pad.bottom}"/>`).join('')}${ticks.years.map(t=>`<line class="grid-line" style="opacity:.9" x1="${x(t.ts)}" y1="${pad.top}" x2="${x(t.ts)}" y2="${H-pad.bottom}"/><text class="axis-label" x="${x(t.ts)-14}" y="${H-18}">${t.label}</text>`).join('')}<text class="axis-title" x="${W-pad.right+6}" y="14">Normalized scale (focus: ${assets[focus].name})</text><g clip-path="url(#plotClip2)">${paths}${dots}</g>`;
+      svg.innerHTML = `<defs><clipPath id="plotClip2"><rect x="${pad.left}" y="${pad.top}" width="${innerW}" height="${innerH}"/></clipPath></defs>${yTickValues.map(v=>`<line class="grid-line" x1="${pad.left}" y1="${yUnified(v)}" x2="${W-pad.right}" y2="${yUnified(v)}"/><text class="axis-label" x="${W-pad.right+8}" y="${yUnified(v)+4}">${Math.round(v*100)}%</text>`).join('')}${ticks.quarters.map(t=>`<line class="grid-line" style="opacity:.45" x1="${x(t.ts)}" y1="${pad.top}" x2="${x(t.ts)}" y2="${H-pad.bottom}"/>`).join('')}${ticks.years.map(t=>`<line class="grid-line" style="opacity:.9" x1="${x(t.ts)}" y1="${pad.top}" x2="${x(t.ts)}" y2="${H-pad.bottom}"/><text class="axis-label" x="${x(t.ts)-14}" y="${H-18}">${t.label}</text>`).join('')}<text class="axis-title" x="${W-pad.right+6}" y="14">Relative move vs visible-start price (focus: ${assets[focus].name})</text><g clip-path="url(#plotClip2)">${paths}${dots}</g>`;
       legend.innerHTML = Object.entries(assets).map(([k,a])=>`<button class="chip ${focus===k?'active':''}" data-asset="${k}" style="border-color:${a.color}66">${a.name}</button>`).join('');
       legend.querySelectorAll('.chip').forEach(btn=>btn.addEventListener('click',()=>{multiState.focus=btn.dataset.asset;drawMultiChart();}));
 
@@ -226,7 +465,16 @@
     const stopDrag=()=>{multiState.dragging=false;}; multiShell.addEventListener('pointerup',stopDrag); multiShell.addEventListener('pointercancel',stopDrag);
 
     window.addEventListener('resize',()=>{app.renderer.resize(window.innerWidth,window.innerHeight);initBackground();drawSingleChart();drawMultiChart();});
-    initBackground(); drawSingleChart(); drawMultiChart();
+
+    async function bootstrapCharts() {
+      initBackground();
+      await hydratePdaiSeries();
+      drawSingleChart();
+      drawMultiChart();
+    }
+
+    bootstrapCharts();
+
   </script>
 </body>
 </html>
